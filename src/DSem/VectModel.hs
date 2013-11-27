@@ -7,13 +7,47 @@
 
 -------------------------------------------------------------------------------}
 
-{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances #-}
 
 module DSem.VectModel where
 
 import Control.Monad
 import qualified Data.Map as M
 import qualified DSem.Vector as V
+import DSem.Vector (Vector)
+import Control.Monad.State
+import Control.Monad.Reader
+
+{-
+class (Vector v, Monad m) => MVectModel a m t v where
+  getVector :: a -> t -> m (Maybe v)
+  getDim    :: a -> m (Int,Int)
+--  toList   :: m [(t,v)]
+
+instance Vector v => MVectModel (CachedVectModel v t) IO t v
+
+data CachedVectModel v t
+-}
+--
+
+class (Vector v, Monad m) => VectModelM m t c v where
+  getVector   :: t -> m (Maybe v)
+  getDim      :: m (Int,Int)
+  getTargets  :: m [t]
+  getContexts :: m [c]
+
+type ModelIO a   = StateT a IO
+type ModelPure a = Reader a
+
+runPure :: ModelPure a b -> a -> b
+runPure = runReader
+
+runIO :: ModelIO a b -> a -> IO b
+runIO = evalStateT
+
+
+
+--
 
 class V.Vector v => VectModel m t v | m -> t, m -> v where
   vect     :: m -> t -> Maybe v

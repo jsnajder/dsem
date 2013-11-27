@@ -45,10 +45,10 @@ class Eq v => Vector v where
 
   -- default implementations:
 
-  add  = zipWith (+)
-  pmul = zipWith (*)
+  add       = zipWith (+)
+  pmul      = zipWith (*)
   dot v1 v2 = Data.List.sum . nonzeros $ pmul v1 v2
-  nonzeros = filter (>0) . toList
+  nonzeros  = filter (>0) . toList
 
 norm :: Vector v => v -> Weight
 norm v = sqrt $ v `dot` v
