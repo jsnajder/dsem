@@ -14,10 +14,14 @@ module DSem.VectModel.BowCached (
   Target,
   Context,
   BowCached,
-  BowM,
+  ModelM,
   Vect,
+  CacheStats (..),
   readModel,
-  setCache) where
+  setCacheSize,
+  getCacheStats,
+  loadTargets,
+  loadAllTargets) where
 
 import DSem.VectModel
 import qualified DSem.Vector.SparseVector as V
@@ -37,23 +41,50 @@ type Word    = B.ByteString
 type Target  = Word
 type Context = Word
 type Vect    = V.SparseVector
-type BowM    = ModelIO BowCached
+type ModelM    = ModelIO BowCached
 
 type Contexts    = IM.IntMap Context
 type Matrix      = BM.BoundedMap Target Vect
 type TargetIndex = M.Map Target Int   -- from targets to fileseeks
 
+data CacheStats = CacheStats {
+  hits      :: !Int,
+  misses    :: !Int,
+  unknowns  :: !Int,
+  loads     :: !Int }
+  deriving (Eq,Show,Read,Ord)
+
 data BowCached = BowCached {
+  stats     :: !CacheStats,
   handle    :: Handle,
   index     :: TargetIndex,
   matrix    :: Matrix,
   contexts  :: Maybe Contexts }
   deriving (Show,Eq)
 
---runModel :: BowCached -> BowM a -> IO a
+--runModel :: BowCached -> ModelM a -> IO a
 --runModel = runModelIO
 
 defaultCacheSize = 512
+
+incHits :: ModelM ()
+incHits = modify $ \s -> let st = stats s 
+  in s { stats = st { hits = succ $ hits st }}
+
+incMisses :: ModelM ()
+incMisses = modify $ \s -> let st = stats s 
+  in s { stats = st { misses = succ $ misses st }}
+
+incUnknowns :: ModelM ()
+incUnknowns = modify $ \s -> let st = stats s 
+  in s { stats = st { unknowns = succ $ unknowns st }}
+
+incLoads :: ModelM ()
+incLoads = modify $ \s -> let st = stats s 
+  in s { stats = st { loads = succ $ loads st }}
+
+getCacheStats :: ModelM CacheStats
+getCacheStats = gets stats
 
 instance Model (ModelIO BowCached) Target Context Vect where
  
@@ -61,9 +92,10 @@ instance Model (ModelIO BowCached) Target Context Vect where
     m  <- gets matrix
     case BM.lookup t m of
       Nothing -> do v <- readVector t
-                    when (isJust v) $ addVector t (fromJust v)
+                    if (isJust v) then do addVector t (fromJust v); incMisses
+                    else incUnknowns
                     return v
-      v       -> return v
+      v       -> do incHits; return v
 
   getDim = do t <- gets (M.size . index)
               c <- gets (IM.size . fromMaybe IM.empty . contexts)
@@ -73,10 +105,10 @@ instance Model (ModelIO BowCached) Target Context Vect where
 
   getTargets = gets (M.keys . index)
 
-setCache :: Int -> BowM ()
-setCache n = modify (\s -> s { matrix = BM.setSize n $ matrix s})
+setCacheSize :: Int -> ModelM ()
+setCacheSize n = modify (\s -> s { matrix = BM.setSize n $ matrix s})
 
-addVector :: Target -> Vect -> BowM ()
+addVector :: Target -> Vect -> ModelM ()
 addVector t v = modify (\s -> s { matrix = BM.insert t v $ matrix s} )
 
 untilM :: IO Bool -> IO a -> IO [a]
@@ -84,15 +116,22 @@ untilM p a = do
   t <- p
   if t then return [] else do x <- a; xs <- untilM p a; return (x:xs)
 
-readVector :: Target -> BowM (Maybe Vect)
+readVector :: Target -> ModelM (Maybe Vect)
 readVector t = do
   h  <- gets handle
   ti <- gets index
   case M.lookup t ti of
     Nothing -> return Nothing
     Just i  -> do liftIO $ hSeek h AbsoluteSeek (toInteger i)
-                  Just . parseVector <$> (trace $ "Reading in vector for " ++ B.toString t) 
+                  incLoads
+                  Just . parseVector <$> --(trace $ "Reading in vector for " ++ B.toString t) 
                                          liftIO (hGetLine h)
+
+loadTargets :: [Target] -> ModelM Int
+loadTargets ts = length . filter isJust <$> mapM readVector ts
+
+loadAllTargets :: ModelM Int
+loadAllTargets = getTargets >>= loadTargets
 
 mkTargetIndex :: Handle -> IO TargetIndex
 mkTargetIndex h = M.fromList <$>
@@ -111,8 +150,10 @@ readModel fc fm = do
   h  <- openFile fm ReadMode
   ti <- mkTargetIndex h
   cs <- readContexts fc
-  return $ BowCached { matrix = BM.setSize defaultCacheSize $ BM.empty, 
-                       handle = h, contexts = Just cs, index = ti }
+  return $ BowCached { 
+    matrix = BM.setSize defaultCacheSize $ BM.empty, 
+    handle = h, contexts = Just cs, index = ti,
+    stats = CacheStats { hits = 0, misses = 0, unknowns = 0, loads = 0 } }
 
 parseVector :: String -> Vect
 parseVector = parse . words

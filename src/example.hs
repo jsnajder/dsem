@@ -1,5 +1,5 @@
 import DSem.VectModel.Bow
-import qualified DSem.VectModel.BowCached as BC
+import qualified DSem.VectModel.BowCached as Bow
 import DSem.VectModel
 import qualified Data.ByteString.UTF8 as B
 import qualified DSem.Vector.SparseVector as V
@@ -9,21 +9,25 @@ import Control.Monad.Trans
 --import Control.Monad.Trans
 
 main = do
-  m <- BC.readModel "../data/hrwac-sample.bow.contexts" 
+  m <- Bow.readModel "../data/hrwac-sample.bow.contexts" 
                     "../data/hrwac-sample.bow.matrix"
-  c <- BC.runModelIO m $ do
-            BC.setCache 5
+  c <- Bow.runModelIO m $ do
+            Bow.setCacheSize 4
+            x <- Bow.loadAllTargets
+            liftIO $ print x
             v1 <- getVector $ B.fromString "jesen"
             v2 <- getVector $ B.fromString "kino"
             v3 <- getVector $ B.fromString "kist"
             v4 <- getVector $ B.fromString "jesen"
-            v4 <- getVector $ B.fromString "kompletan"
+            v1 <- getVector $ B.fromString "kompletan"
             v4 <- getVector $ B.fromString "jesen"
             v4 <- getVector $ B.fromString "kino"
-            v4 <- getVector $ B.fromString "agnosticizam"
+            v4 <- getVector $ B.fromString "agnosticiza"
+            st <- Bow.getCacheStats
+            liftIO $ print st
             dim <- getDim
             liftIO $ print dim
-            return $ liftM2 cosine v1 v2
+            return $ liftM2 cosine v1 v4
   print c
   return ()
 
