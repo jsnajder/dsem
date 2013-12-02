@@ -57,7 +57,7 @@ scale :: Vector v => Weight -> v -> v
 scale w v = map (*w) v
 
 normalize :: Vector v => v -> v
-normalize v = scale (1/norm v) v
+normalize v = scale (1 / norm v) v
 
 sum :: Vector v => [v] -> v
 sum [] = empty

@@ -9,12 +9,15 @@
 
 {-# LANGUAGE TypeSynonymInstances, MultiParamTypeClasses, FlexibleInstances #-}
 
-module DSem.VectModel.BowCached where
-{- (
+module DSem.VectModel.BowCached (
   module DSem.VectModel,
-  Word,
-  SparseBoW,
-  readModel) where -}
+  Target,
+  Context,
+  BowCached,
+  BowM,
+  Vect,
+  readModel,
+  setCache) where
 
 import DSem.VectModel
 import qualified DSem.Vector.SparseVector as V
@@ -23,7 +26,7 @@ import qualified Data.ByteString.UTF8 as B
 import qualified Data.Map as M
 import qualified Data.Map.Strict as MS
 import qualified Data.IntMap as IM
-import qualified Data.CacheMap as CM
+import qualified Data.BoundedMap as BM
 import Data.Maybe
 import Control.Monad.State
 import Control.Applicative
@@ -37,19 +40,18 @@ type Vect    = V.SparseVector
 type BowM    = ModelIO BowCached
 
 type Contexts    = IM.IntMap Context
-type Matrix      = CM.CacheMap Target Vect
+type Matrix      = BM.BoundedMap Target Vect
 type TargetIndex = M.Map Target Int   -- from targets to fileseeks
 
 data BowCached = BowCached {
- -- cacheSize :: Int,
   handle    :: Handle,
   index     :: TargetIndex,
   matrix    :: Matrix,
   contexts  :: Maybe Contexts }
   deriving (Show,Eq)
 
-runModel :: BowCached -> BowM a -> IO a
-runModel = runModelIO
+--runModel :: BowCached -> BowM a -> IO a
+--runModel = runModelIO
 
 defaultCacheSize = 512
 
@@ -57,24 +59,14 @@ instance Model (ModelIO BowCached) Target Context Vect where
  
   getVector t = do
     m  <- gets matrix
-    case CM.lookup t m of
+    case BM.lookup t m of
       Nothing -> do v <- readVector t
                     when (isJust v) $ addVector t (fromJust v)
                     return v
       v       -> return v
-{-
-    case MS.lookup t m of
-      Nothing -> do v  <- readVector t
-                    cs <- gets cacheSize
-                    let m' = MS.insert t v
-                            (if MS.size m > cs then MS.deleteMin m else m)
-                    modify (\s -> s { matrix = m' })
-                    return $ Just v
-      v       -> return v
--}
 
-  getDim = do c <- gets (IM.size . fromMaybe IM.empty . contexts)
-              t <- gets (M.size . index)
+  getDim = do t <- gets (M.size . index)
+              c <- gets (IM.size . fromMaybe IM.empty . contexts)
               return (t,c)
 
   getContexts = gets (IM.elems . fromMaybe IM.empty . contexts) 
@@ -82,10 +74,10 @@ instance Model (ModelIO BowCached) Target Context Vect where
   getTargets = gets (M.keys . index)
 
 setCache :: Int -> BowM ()
-setCache n = modify (\s -> s { matrix = CM.setCache n $ matrix s})
+setCache n = modify (\s -> s { matrix = BM.setSize n $ matrix s})
 
 addVector :: Target -> Vect -> BowM ()
-addVector t v = modify (\s -> s { matrix = CM.insert t v $ matrix s} )
+addVector t v = modify (\s -> s { matrix = BM.insert t v $ matrix s} )
 
 untilM :: IO Bool -> IO a -> IO [a]
 untilM p a = do
@@ -103,25 +95,24 @@ readVector t = do
                                          liftIO (hGetLine h)
 
 mkTargetIndex :: Handle -> IO TargetIndex
-mkTargetIndex h = do
-  xs <- untilM (hIsEOF h) $ do
+mkTargetIndex h = M.fromList <$>
+  (untilM (hIsEOF h) $ do
     x <- hTell h
     (t:_) <- words <$> hGetLine h
     let t' = B.fromString t
-    return $ t' `seq` (t',fromInteger x)
-  return $ M.fromList xs
+    return $ t' `seq` (t',fromInteger x))
 
 readContexts :: FilePath -> IO Contexts
 readContexts f = 
   IM.fromList . zip [1..] . map B.fromString . lines <$> readFile f
 
-readModel :: FilePath -> IO BowCached
-readModel f = do
-  h  <- openFile f ReadMode
+readModel :: FilePath -> FilePath -> IO BowCached
+readModel fc fm = do
+  h  <- openFile fm ReadMode
   ti <- mkTargetIndex h
-  return $ BowCached { 
-    handle = h, matrix = CM.setCache defaultCacheSize $ CM.empty, 
-    contexts = Nothing, index = ti }
+  cs <- readContexts fc
+  return $ BowCached { matrix = BM.setSize defaultCacheSize $ BM.empty, 
+                       handle = h, contexts = Just cs, index = ti }
 
 parseVector :: String -> Vect
 parseVector = parse . words

@@ -1,6 +1,6 @@
 {-------------------------------------------------------------------------------
 
- DSem.VectModel.SparseBoW
+ DSem.VectModel.Bow
  Bag-of-words distributional model
 
  (c) 2013 Jan Snajder <jan.snajder@fer.hr>
@@ -9,7 +9,7 @@
 
 {-# LANGUAGE TypeSynonymInstances, MultiParamTypeClasses, FlexibleInstances #-}
 
-module DSem.VectModel.BoW where
+module DSem.VectModel.Bow where
 {- (
   module DSem.VectModel,
   Word,
@@ -23,17 +23,26 @@ import qualified Data.ByteString.UTF8 as B
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import Control.Monad.Reader
+import Control.Monad.State
 
 type Word  = B.ByteString
+type Vect = V.SparseVector
 
-data SparseBoW = SB {
-  matrix   :: M.Map Word V.SparseVector,
+type BowM = ModelPure Bow
+
+runModel :: Bow -> BowM a -> a
+runModel m = runModelPure m
+
+data Bow = Bow {
+  matrix   :: M.Map Word Vect,
   contexts :: IM.IntMap Word }
   deriving (Show,Read,Eq,Ord)
 
-instance VectModelM (ModelPure SparseBoW) Word Word V.SparseVector where
+--type Bow = ModelPure SparseBow Word Word V.SparseVector
+
+instance Model (Reader Bow) Word Word Vect where
  
-  getVector t = asks (M.lookup t . matrix)
+  getVector t = asks (M.lookup t . matrix) 
 
   getDim = do m <- asks matrix
               return $ case M.size m of
@@ -50,12 +59,17 @@ instance VectModelM (ModelPure SparseBoW) Word Word V.SparseVector where
   --fromList xs = SB (M.fromList xs) Nothing
 -}
 
-readModel :: FilePath -> IO SparseBoW
+--readModel2 :: FilePath -> Bow ()
+--readModel2 f = do
+--  m <- readModel f
+--  return 
+
+readModel :: FilePath -> IO Bow
 readModel f = do
   (x:xs) <- lines `liftM` readFile f
   let cs = IM.fromList . zip [1..] . map B.fromString $ words x
       m  = M.fromList $ map (parse . words) xs
-  return $ SB m cs
+  return $ Bow m cs
   where parse (t:xs) = let t'  = B.fromString t
                            xs' = V.fromAssocList $ map parse2 xs
                        in t' `seq` xs' `seq` (t',xs')
@@ -66,12 +80,12 @@ readModel f = do
                    in c' `seq` f' `seq` (c',f')
 
 -- TODO: leaks! check!
-readModelDense :: FilePath -> IO SparseBoW
+readModelDense :: FilePath -> IO Bow
 readModelDense f = do
   (x:xs) <- lines `liftM` readFile f
   let cs = IM.fromList . zip [1..] . map B.fromString $ words x
       m  = M.fromList $ map (parse . words) xs
-  return $ SB m cs
+  return $ Bow m cs
   where parse (t:cs) = let t'  = B.fromString t
                            cs' = V.fromAssocList . filter ((>0).snd) $ 
                                  let zs = map (\c -> let w = read c :: Double in w `seq` w) cs

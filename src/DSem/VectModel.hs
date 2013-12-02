@@ -19,18 +19,28 @@ import Control.Monad.State
 import Control.Monad.Reader
 
 {-
-class (Vector v, Monad m) => MVectModel a m t v where
-  getVector :: a -> t -> m (Maybe v)
-  getDim    :: a -> m (Int,Int)
+class (Vector v, Monad m) => Model a m t c v where
+  getVector   :: a -> t -> m (Maybe v)
+  getDim      :: a -> m (Int,Int)
+  getTargets  :: a -> m [t]
+  getContexts :: a -> m [c]
+--  getVector :: a -> t -> m (Maybe v)
+--  getDim    :: a -> m (Int,Int)
 --  toList   :: m [(t,v)]
 
-instance Vector v => MVectModel (CachedVectModel v t) IO t v
 
-data CachedVectModel v t
+type ModelIO a   = StateT a IO
+type ModelPure a = Reader a
+
+runModelPure :: ModelPure a b -> a -> b
+runModelPure = runReader
+
+runModelIO :: ModelIO a b -> a -> IO b
+runModelIO = evalStateT
 -}
---
+------------------
 
-class (Vector v, Monad m) => VectModelM m t c v where
+class (Vector v, Monad m) => Model m t c v | m -> v, m -> t, m -> c where
   getVector   :: t -> m (Maybe v)
   getDim      :: m (Int,Int)
   getTargets  :: m [t]
@@ -39,13 +49,11 @@ class (Vector v, Monad m) => VectModelM m t c v where
 type ModelIO a   = StateT a IO
 type ModelPure a = Reader a
 
-runPure :: ModelPure a b -> a -> b
-runPure = runReader
+runModelPure :: a -> ModelPure a b -> b
+runModelPure = flip runReader
 
-runIO :: ModelIO a b -> a -> IO b
-runIO = evalStateT
-
-
+runModelIO :: a -> ModelIO a b -> IO b
+runModelIO = flip evalStateT 
 
 --
 
