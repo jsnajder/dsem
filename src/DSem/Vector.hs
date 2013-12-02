@@ -66,9 +66,9 @@ sum vs = foldl1' add vs
 linComb :: Vector v => [(Weight,v)] -> v
 linComb = sum . Data.List.map (uncurry scale)
 
-type Sim v = v -> v -> Double 
+type VectorSim v = v -> v -> Double 
 
-cosine :: Vector v => Sim v
+cosine :: Vector v => VectorSim v
 cosine v1 v2 
   | n1==0 || n2==0 = 0
   | otherwise      = v1 `dot` v2 / (n1 * n2)

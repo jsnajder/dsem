@@ -18,28 +18,6 @@ import DSem.Vector (Vector)
 import Control.Monad.State
 import Control.Monad.Reader
 
-{-
-class (Vector v, Monad m) => Model a m t c v where
-  getVector   :: a -> t -> m (Maybe v)
-  getDim      :: a -> m (Int,Int)
-  getTargets  :: a -> m [t]
-  getContexts :: a -> m [c]
---  getVector :: a -> t -> m (Maybe v)
---  getDim    :: a -> m (Int,Int)
---  toList   :: m [(t,v)]
-
-
-type ModelIO a   = StateT a IO
-type ModelPure a = Reader a
-
-runModelPure :: ModelPure a b -> a -> b
-runModelPure = runReader
-
-runModelIO :: ModelIO a b -> a -> IO b
-runModelIO = evalStateT
--}
-------------------
-
 class (Vector v, Monad m) => Model m t c v | m -> v, m -> t, m -> c where
   getVector   :: t -> m (Maybe v)
   getDim      :: m (Int,Int)
@@ -53,24 +31,18 @@ runModelPure :: a -> ModelPure a b -> b
 runModelPure = flip runReader
 
 runModelIO :: a -> ModelIO a b -> IO b
-runModelIO = flip evalStateT 
+runModelIO = flip evalStateT
 
---
+targetSim :: Model m t c v => V.VectorSim v -> t -> t -> m (Maybe Double)
+targetSim sim t1 t2 = do 
+  v1 <- getVector t1
+  v2 <- getVector t2
+  return $ liftM2 sim v1 v2
 
-class V.Vector v => VectModel m t v | m -> t, m -> v where
-  vect     :: m -> t -> Maybe v
-  dims     :: m -> (Int,Int)
-  toList   :: m -> [(t,v)]
---  fromList :: [(t,v)] -> m
-
-type TargetSim t = t -> t -> Maybe Double
-
-targetSim :: VectModel m t v => V.Sim v -> m -> TargetSim t
-targetSim sim m t1 t2 = liftM2 sim (vect m t1) (vect m t2)
-
-targetCosine :: VectModel m t v => m -> t -> t -> Maybe Double
+targetCosine :: Model m t c v => t -> t -> m (Maybe Double)
 targetCosine = targetSim V.cosine
 
+{-
 targetMarginals :: (VectModel m t v, Ord t) => m -> M.Map t Double
 targetMarginals m = 
   M.fromList [ (t, sum $ V.toList v) | (t,v) <- toList m]
@@ -94,3 +66,4 @@ lmi n fx fy fxy
   | n * fx * fy * fxy == 0 = 0
   | otherwise = fxy * (log fxy + log n - log fx - log fy) 
 
+-}

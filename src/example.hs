@@ -22,12 +22,15 @@ main = do
             v1 <- getVector $ B.fromString "kompletan"
             v4 <- getVector $ B.fromString "jesen"
             v4 <- getVector $ B.fromString "kino"
-            v4 <- getVector $ B.fromString "agnosticiza"
+            v3 <- getVector $ B.fromString "agnosticiza"
             st <- Bow.getCacheStats
             liftIO $ print st
             dim <- getDim
             liftIO $ print dim
+            s <- targetCosine (B.fromString "kompletan") (B.fromString "kino")
+            liftIO $ print s
             return $ liftM2 cosine v1 v4
+             
   print c
   return ()
 
