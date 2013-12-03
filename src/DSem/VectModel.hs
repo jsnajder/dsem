@@ -15,7 +15,7 @@ import Control.Monad
 import qualified Data.Map as M
 import qualified DSem.Vector as V
 import DSem.Vector (Vector)
-import Control.Monad.State
+import Control.Monad.State.Strict
 import Control.Monad.Reader
 
 class (Vector v, Monad m) => Model m t c v | m -> v, m -> t, m -> c where

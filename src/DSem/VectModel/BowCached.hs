@@ -1,9 +1,14 @@
 {-------------------------------------------------------------------------------
 
- DSem.VectModel.Bow
+ DSem.VectModel.BowCached
  Bag-of-words distributional model
 
  (c) 2013 Jan Snajder <jan.snajder@fer.hr>
+
+TODO: split into: 
+Bow.Sparse
+Bow.Dense
+Bow.*.Cached
 
 -------------------------------------------------------------------------------}
 
@@ -19,16 +24,17 @@ module DSem.VectModel.BowCached (
   CacheStats (..),
   readModel,
   setCacheSize,
-  getCacheStats,
-  loadTargets,
-  loadAllTargets) where
+  getCacheStats) where
+  --cacheTargets,
+  --cacheAllTargets
 
 import DSem.VectModel
 import qualified DSem.Vector.SparseVector as V
 import Control.Monad
-import qualified Data.ByteString.UTF8 as B
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
+--import Data.SmallString 
 import qualified Data.Map as M
-import qualified Data.Map.Strict as MS
 import qualified Data.IntMap as IM
 import qualified Data.BoundedMap as BM
 import Data.Maybe
@@ -36,12 +42,13 @@ import Control.Monad.State
 import Control.Applicative
 import System.IO
 import Debug.Trace
+import qualified Data.Text as T
 
-type Word    = B.ByteString
+type Word    = T.Text -- TODO; convert to smallstring!
 type Target  = Word
 type Context = Word
 type Vect    = V.SparseVector
-type ModelM    = ModelIO BowCached
+type ModelM  = ModelIO BowCached
 
 type Contexts    = IM.IntMap Context
 type Matrix      = BM.BoundedMap Target Vect
@@ -50,20 +57,16 @@ type TargetIndex = M.Map Target Int   -- from targets to fileseeks
 data CacheStats = CacheStats {
   hits      :: !Int,
   misses    :: !Int,
-  unknowns  :: !Int,
-  loads     :: !Int }
+  unknowns  :: !Int }
   deriving (Eq,Show,Read,Ord)
 
 data BowCached = BowCached {
-  stats     :: !CacheStats,
+  stats     :: CacheStats,
   handle    :: Handle,
   index     :: TargetIndex,
   matrix    :: Matrix,
   contexts  :: Maybe Contexts }
   deriving (Show,Eq)
-
---runModel :: BowCached -> ModelM a -> IO a
---runModel = runModelIO
 
 defaultCacheSize = 512
 
@@ -78,10 +81,6 @@ incMisses = modify $ \s -> let st = stats s
 incUnknowns :: ModelM ()
 incUnknowns = modify $ \s -> let st = stats s 
   in s { stats = st { unknowns = succ $ unknowns st }}
-
-incLoads :: ModelM ()
-incLoads = modify $ \s -> let st = stats s 
-  in s { stats = st { loads = succ $ loads st }}
 
 getCacheStats :: ModelM CacheStats
 getCacheStats = gets stats
@@ -106,7 +105,7 @@ instance Model (ModelIO BowCached) Target Context Vect where
   getTargets = gets (M.keys . index)
 
 setCacheSize :: Int -> ModelM ()
-setCacheSize n = modify (\s -> s { matrix = BM.setSize n $ matrix s})
+setCacheSize n = modify (\s -> s { matrix = BM.setBound n $ matrix s})
 
 addVector :: Target -> Vect -> ModelM ()
 addVector t v = modify (\s -> s { matrix = BM.insert t v $ matrix s} )
@@ -123,27 +122,34 @@ readVector t = do
   case M.lookup t ti of
     Nothing -> return Nothing
     Just i  -> do liftIO $ hSeek h AbsoluteSeek (toInteger i)
-                  incLoads
-                  Just . parseVector <$> --(trace $ "Reading in vector for " ++ B.toString t) 
-                                         liftIO (hGetLine h)
+                  Just . parseVector <$> liftIO (T.hGetLine h)
 
-loadTargets :: [Target] -> ModelM Int
-loadTargets ts = length . filter isJust <$> mapM readVector ts
+{-
+nepotrebno?
 
-loadAllTargets :: ModelM Int
-loadAllTargets = getTargets >>= loadTargets
+-- not good: mapM is not lazy... or something (?)
+-- not tail recursive!
+--cacheTargets :: [Target] -> ModelM Int
+--cacheTargets ts = length . filter isJust <$> mapM getVector ts
+
+cacheTargets :: [Target] -> ModelM Int
+cacheTargets = foldM (\n t -> do Just v <- getVector t; return (V.norm v `seq` n `seq` n + 1)) 0
+-- the above forces the vector to be computed
+
+cacheAllTargets :: ModelM Int
+cacheAllTargets = getTargets >>= cacheTargets
+-}
 
 mkTargetIndex :: Handle -> IO TargetIndex
 mkTargetIndex h = M.fromList <$>
   (untilM (hIsEOF h) $ do
     x <- hTell h
-    (t:_) <- words <$> hGetLine h
-    let t' = B.fromString t
-    return $ t' `seq` (t',fromInteger x))
+    (t:_) <- T.words <$> T.hGetLine h
+    return (t, fromInteger x))
 
 readContexts :: FilePath -> IO Contexts
 readContexts f = 
-  IM.fromList . zip [1..] . map B.fromString . lines <$> readFile f
+  IM.fromList . zip [1..] . T.lines <$> T.readFile f
 
 readModel :: FilePath -> FilePath -> IO BowCached
 readModel fc fm = do
@@ -151,20 +157,21 @@ readModel fc fm = do
   ti <- mkTargetIndex h
   cs <- readContexts fc
   return $ BowCached { 
-    matrix = BM.setSize defaultCacheSize $ BM.empty, 
+    matrix = BM.empty defaultCacheSize, 
     handle = h, contexts = Just cs, index = ti,
-    stats = CacheStats { hits = 0, misses = 0, unknowns = 0, loads = 0 } }
+    stats = CacheStats { hits = 0, misses = 0, unknowns = 0 } }
 
-parseVector :: String -> Vect
-parseVector = parse . words
+parseVector :: T.Text -> Vect
+parseVector = parse . T.words
   where parse (_:xs) = V.fromAssocList $ map parse2 xs
         parse _      = error "no parse"
-        parse2 x = let (c,_:f) = break (==':') x
-                       c' = c `seq` read c
-                       f' = f `seq` read f
-                   in c' `seq` f' `seq` (c',f')
+        parse2 x = let (c:f:_) = T.split (==':') x
+                       c' = read $ T.unpack c
+                       f' = read $ T.unpack f
+                   in (c',f')
 
-{-
+{- TODO: adapt and move to Bow uncached
+ 
 readMatrix :: FilePath -> IO Matrix
 readMatrix f = 
   M.fromList . map (parse . words) . lines <$> readFile f
@@ -178,19 +185,3 @@ readMatrix f =
                    in c' `seq` f' `seq` (c',f')
 -}
 
-{-
-readModel :: FilePath -> IO BowCached
-readModel f = do
-  (x:xs) <- lines `liftM` readFile f
-  let cs = IM.fromList . zip [1..] . map B.fromString $ words x
-      m  = M.fromList $ map (parse . words) xs
-  return $ undefined -- BowCached 0 undefined m (Just cs)
-  where parse (t:xs) = let t'  = B.fromString t
-                           xs' = V.fromAssocList $ map parse2 xs
-                       in t' `seq` xs' `seq` (t',xs')
-        parse _      = error "no parse"
-        parse2 x = let (c,_:f) = break (==':') x
-                       c' = c `seq` read c
-                       f' = f `seq` read f
-                   in c' `seq` f' `seq` (c',f')
--}
