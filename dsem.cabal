@@ -2,7 +2,7 @@
 -- see http://haskell.org/cabal/users-guide/
 
 name:                dsem
-version:             0.2.0.0
+version:             0.3.0.0
 synopsis:            Basic distributional semantic models
 -- description:         
 homepage:            http://github.com/jsnajder/dsem
@@ -15,25 +15,30 @@ category:            NLP
 build-type:          Simple
 cabal-version:       >=1.8
 
-library
+Library
   exposed-modules:
     DSem, 
     DSem.Vector, 
-    DSem.VectModel, 
-    DSem.VectModel.DepModel, 
-    DSem.VectModel.SparseBoW,
+    DSem.VectorSpaceModel, 
+    DSem.VectorSpaceModel.BowCached,
+-- TMPOFF   DSem.VectModel.DepModel, 
+-- TMPOFF   DSem.VectModel.SparseBoW,
     DSem.Vector.SparseVector,
-    ConllReader
-  -- other-modules:       
+    ConllReader,
+    Data.BoundedMap
   build-depends:
     base ==4.6.*, 
     containers ==0.5.*, 
     utf8-string ==0.3.*, 
     split ==0.2.*, 
-    vector ==0.10.*
+    vector ==0.10.*,
+    mtl ==2.1.*,
+    text ==0.11.*,
+    dequeue ==0.1.*
   hs-source-dirs: src
  extensions:
-    FlexibleInstances
+    FlexibleInstances, MultiParamTypeClasses,
+    FunctionalDependencies, FlexibleInstances
 
 Executable dm2dep
   Build-Depends:  base ==4.6.*, containers ==0.5.*, utf8-string ==0.3.*
@@ -41,12 +46,15 @@ Executable dm2dep
   Hs-Source-Dirs: src
 
 Executable pairs-sim
-  Build-Depends:  base ==4.6.*, containers ==0.5.*, utf8-string ==0.3.*, split ==0.2.*, dsem
+  Build-Depends:  base ==4.6.*, containers ==0.5.*, utf8-string ==0.3.*, 
+                  split ==0.2.*, dsem, mtl ==2.1.*, text ==0.11.*, 
+                  dequeue ==0.1.*
   Main-Is:        pairs-sim.hs
   Hs-Source-Dirs: src
 
 Executable conll2bow-hadoop
-  Build-Depends:  base ==4.6.*, containers ==0.5.*, utf8-string ==0.3.*, parseargs ==0.1.*, counts ==0.1.*, split ==0.2.*, dsem
+  Build-Depends:  base ==4.6.*, containers ==0.5.*, utf8-string ==0.3.*, 
+                  parseargs ==0.1.*, counts ==0.1.*, split ==0.2.*, dsem
   Main-Is:        conll2bow-hadoop.hs
   Hs-Source-Dirs: src
 

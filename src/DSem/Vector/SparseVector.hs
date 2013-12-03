@@ -15,7 +15,6 @@ import DSem.Vector
 import qualified Data.Map.Strict as M
 import Data.Word
 import Data.Maybe
-import Control.DeepSeq
 
 type Index = Int
 newtype SparseVector = SV (M.Map Index Weight)
@@ -58,6 +57,4 @@ zipAligned f m1 m2 = M.unions $
    M.map (\x -> f (Just x) Nothing) (M.difference m1 m2), 
    M.map (\x -> f Nothing (Just x)) (M.difference m2 m1)]
 -- traversing a sorted list would probably be faster
-
-instance NFData SparseVector 
 

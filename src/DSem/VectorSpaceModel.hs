@@ -1,7 +1,7 @@
 {-------------------------------------------------------------------------------
 
- DSem.VectModel
- Interface
+ DSem.VectorSpaceModel
+ Vector space model interface
 
  (c) 2013 Jan Snajder <jan.snajder@fer.hr>
 
@@ -9,7 +9,7 @@
 
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances #-}
 
-module DSem.VectModel where
+module DSem.VectorSpaceModel where
 
 import Control.Monad
 import qualified Data.Map as M

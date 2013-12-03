@@ -12,10 +12,10 @@ Bow.*.Cached
 
 -------------------------------------------------------------------------------}
 
-{-# LANGUAGE TypeSynonymInstances, MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 
-module DSem.VectModel.BowCached (
-  module DSem.VectModel,
+module DSem.VectorSpaceModel.BowCached (
+  module DSem.VectorSpaceModel,
   Target,
   Context,
   BowCached,
@@ -23,12 +23,13 @@ module DSem.VectModel.BowCached (
   Vect,
   CacheStats (..),
   readModel,
+  readMatrix,
   setCacheSize,
   getCacheStats) where
   --cacheTargets,
   --cacheAllTargets
 
-import DSem.VectModel
+import DSem.VectorSpaceModel
 import qualified DSem.Vector.SparseVector as V
 import Control.Monad
 import qualified Data.Text as T
@@ -92,7 +93,7 @@ instance Model (ModelIO BowCached) Target Context Vect where
     case BM.lookup t m of
       Nothing -> do v <- readVector t
                     if (isJust v) then do addVector t (fromJust v); incMisses
-                    else incUnknowns
+                      else incUnknowns
                     return v
       v       -> do incHits; return v
 
@@ -151,24 +152,28 @@ readContexts :: FilePath -> IO Contexts
 readContexts f = 
   IM.fromList . zip [1..] . T.lines <$> T.readFile f
 
-readModel :: FilePath -> FilePath -> IO BowCached
-readModel fc fm = do
-  h  <- openFile fm ReadMode
+readMatrix :: FilePath -> IO BowCached
+readMatrix f = do
+  h  <- openFile f ReadMode
   ti <- mkTargetIndex h
-  cs <- readContexts fc
   return $ BowCached { 
     matrix = BM.empty defaultCacheSize, 
-    handle = h, contexts = Just cs, index = ti,
+    handle = h, contexts = Nothing, index = ti,
     stats = CacheStats { hits = 0, misses = 0, unknowns = 0 } }
+
+readModel :: FilePath -> FilePath -> IO BowCached
+readModel fm fc = do
+  m <- readMatrix fm  
+  cs <- readContexts fc
+  return $ m { contexts = Just cs }
 
 parseVector :: T.Text -> Vect
 parseVector = parse . T.words
   where parse (_:xs) = V.fromAssocList $ map parse2 xs
         parse _      = error "no parse"
-        parse2 x = let (c:f:_) = T.split (==':') x
-                       c' = read $ T.unpack c
-                       f' = read $ T.unpack f
-                   in (c',f')
+        parse2 x = case T.split (==':') x of
+                     (c:f:_) -> (read $ T.unpack c, read $ T.unpack f)
+                     _       -> error "no parse"
 
 {- TODO: adapt and move to Bow uncached
  

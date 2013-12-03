@@ -1,4 +1,4 @@
-import qualified DSem.VectModel.BowCached as Bow
+import qualified DSem.VectorSpaceModel.BowCached as Bow
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified DSem.Vector as V
@@ -7,8 +7,8 @@ import Control.Applicative
 import Control.Monad.Trans
 
 main = do
-  m <- Bow.readModel "../data/hrwac-sample.bow.contexts" 
-                    "../data/hrwac-sample.bow.matrix"
+  m <- Bow.readModel "../data/hrwac-sample.bow.matrix"
+                     "../data/hrwac-sample.bow.contexts" 
   ts <- T.lines <$> T.readFile "../data/hrwac-sample.bow.targets"
   Bow.runModelIO m $ do
     Bow.setCacheSize 100
