@@ -45,11 +45,10 @@ Executable dm2dep
   Main-Is:        dm2dep.hs
   Hs-Source-Dirs: src
 
-Executable pairs-sim
+Executable bow-pairs-sim
   Build-Depends:  base ==4.6.*, containers ==0.5.*, utf8-string ==0.3.*, 
-                  split ==0.2.*, dsem, mtl ==2.1.*, text ==0.11.*, 
-                  dequeue ==0.1.*
-  Main-Is:        pairs-sim.hs
+                  split ==0.2.*, mtl ==2.1.*, text ==0.11.*, dequeue ==0.1.*
+  Main-Is:        bow-pairs-sim.hs
   Hs-Source-Dirs: src
 
 Executable conll2bow-hadoop
