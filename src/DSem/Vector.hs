@@ -12,16 +12,12 @@ module DSem.Vector where
 import Data.List hiding (insert,sum,zipWith,map)
 import Prelude hiding (zipWith,sum,map)
 import qualified Data.List (sum,map)
-import Control.Monad
-import Data.Maybe
-import Data.Word
-import qualified Data.Map as M
 
 ------------------------------------------------------------------------------
 
 type Weight = Double
 
-class Eq v => Vector v where
+class Vector v where
   empty         :: v
   -- number of stored weights
   size          :: v -> Int

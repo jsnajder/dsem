@@ -17,6 +17,12 @@ import System.Environment
 import System.Exit
 import Data.Maybe
 
+-- retains only the POS (first character after '_')
+parseWord :: String -> String
+parseWord w = case break (=='_') w of
+  (l,_:p:_) -> l ++ "_" ++ [p]
+  (l,_)     -> l
+
 main = do
   args <- getArgs
   when (length args < 2) $ do
@@ -30,6 +36,6 @@ main = do
       s <- fromMaybe (-1) <$> Bow.targetCosine (T.pack w1) (T.pack w2)
       liftIO . putStrLn $ printf "%s\t%s\t%f" w1 w2 s
       -- add: vector norms + overlapping dimensions
-  where parse (w2:w1:_) = (w1,w2)
+  where parse (w2:w1:_) = (parseWord w1,parseWord w2)
         parse _         = error "no parse"
 

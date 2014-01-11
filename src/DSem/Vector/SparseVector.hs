@@ -7,6 +7,8 @@
 
 -------------------------------------------------------------------------------}
 
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, DeriveFoldable, InstanceSigs #-} --TMP
+
 module DSem.Vector.SparseVector
   (module DSem.Vector,
    SparseVector) where
@@ -26,7 +28,6 @@ instance Vector SparseVector where
 
   size (SV v) = M.size v
 
---  zipWith f (SV v1) (SV v2) = SV $ M.filter (>0) $ M.intersectionWith f v1 v2
   zipWith f (SV v1) (SV v2) =
     SV $ M.filter (/=0) $ 
     zipAligned (\w1 w2 -> f (fromMaybe 0 w1) (fromMaybe 0 w2)) v1 v2
@@ -39,13 +40,19 @@ instance Vector SparseVector where
 
   nonzeros (SV v) = M.elems v
 
-  toList (SV v) = undefined -- pad with zeroes
+  toList (SV v) = extendVector $ M.toAscList v
 
   fromList = SV . M.fromList . zip [0..]
 
   toAssocList (SV v) = M.toList v
   
   fromAssocList = SV . M.fromList
+
+extendVector :: [(Index,Weight)] -> [Weight]
+extendVector = pad 0
+  where pad _ []  = []
+        pad j zs@((i,w):xs) | j < i     = 0 : pad (j+1) zs
+                            | otherwise = w : pad (i+1) xs
 
 -- zips two maps by applying combination function on keys that match
 -- for the rest of entries, combination function is applied only on one of the
