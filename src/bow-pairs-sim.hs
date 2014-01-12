@@ -45,7 +45,7 @@ main = do
     Bow.setCacheSize 100
     forM_ ps $ \(w1,w2) -> do
       (s,n1,n2,d) <- similarity w1 w2
-      liftIO . putStrLn $ printf "%s\t%s\t%f\t%f\t%f\t%d" w1 w2 s n1 n2 d
+      liftIO . putStrLn $ printf "%s\t%s\t%.3f\t%.3f\t%.3f\t%d" w1 w2 s n1 n2 d
   where parse (w2:w1:_) = (parseWord w1,parseWord w2)
         parse _         = error "no parse"
 
