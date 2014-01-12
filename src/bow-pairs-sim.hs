@@ -30,7 +30,8 @@ similarity w1 w2 = do
   v2 <- Bow.getVector $ T.pack w2
   return $ case (v1,v2) of
     (Just v1,Just v2) -> 
-      (V.cosine v1 v2, V.norm v1, V.norm v2, V.dimShared v1 v2)
+      (max 0 . min 1 $ V.cosine v1 v2, 
+       V.norm v1, V.norm v2, V.dimShared v1 v2)
     _ -> (-1,-1,-1,-1)
 
 main = do
