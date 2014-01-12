@@ -34,11 +34,13 @@ instance Vector SparseVector where
   
   map f (SV v) = SV (M.map f v)
         
-  add (SV v1) (SV v2) = SV $ M.unionWith (+) v1 v2
+  add (SV v1) (SV v2) = SV . M.filter (/=0) $ M.unionWith (+) v1 v2
 
-  pmul (SV v1) (SV v2) = SV $ M.intersectionWith (*) v1 v2
+  pmul (SV v1) (SV v2) = SV . M.filter (/=0) $ M.intersectionWith (*) v1 v2
+  
+  nonzeroWeights (SV v) = M.elems v
 
-  nonzeros (SV v) = M.elems v
+  nonzeroes = size
 
   toList (SV v) = extendVector $ M.toAscList v
 

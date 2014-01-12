@@ -7,7 +7,18 @@
 
 -------------------------------------------------------------------------------}
 
-module DSem.Vector where
+module DSem.Vector (
+  Vector (..),
+  Weight,
+  norm,
+  scale,
+  normalize,
+  sum,  
+  linComb,
+  VectorSim,
+  cosine,
+  centroid,
+  dimShared) where  
 
 import Data.List hiding (insert,sum,zipWith,map)
 import Prelude hiding (zipWith,sum,map)
@@ -18,33 +29,36 @@ import qualified Data.List (sum,map)
 type Weight = Double
 
 class Vector v where
-  empty         :: v
+  empty          :: v
   -- number of stored weights
-  size          :: v -> Int
+  size           :: v -> Int
   -- combines vectors along common dimensions
-  zipWith       :: (Weight -> Weight -> Weight) -> v -> v -> v
+  zipWith        :: (Weight -> Weight -> Weight) -> v -> v -> v
   -- maps function over weights
-  map           :: (Weight -> Weight) -> v -> v
+  map            :: (Weight -> Weight) -> v -> v
   -- vector addition
-  add           :: v -> v -> v
+  add            :: v -> v -> v
   -- piecewise (componentwise) multiplication
-  pmul          :: v -> v -> v
+  pmul           :: v -> v -> v
   -- dot product
-  dot           :: v -> v -> Weight
-  -- non-zero weights
-  nonzeros      :: v -> [Weight]
+  dot            :: v -> v -> Weight
+  -- number of non-zero dimensions
+  nonzeroes      :: v -> Int
+  -- number of non-zero dimensions
+  nonzeroWeights :: v -> [Weight]
   -- from/to list conversions
-  fromList      :: [Weight] -> v
-  toList        :: v -> [Weight]
-  toAssocList   :: v -> [(Int,Weight)]
-  fromAssocList :: [(Int,Weight)] -> v
+  fromList       :: [Weight] -> v
+  toList         :: v -> [Weight]
+  toAssocList    :: v -> [(Int,Weight)]
+  fromAssocList  :: [(Int,Weight)] -> v
 
   -- default implementations:
 
-  add       = zipWith (+)
-  pmul      = zipWith (*)
-  dot v1 v2 = Data.List.sum . nonzeros $ pmul v1 v2
-  nonzeros  = filter (>0) . toList
+  add            = zipWith (+)
+  pmul           = zipWith (*)
+  dot v1 v2      = Data.List.sum . nonzeroWeights $ pmul v1 v2
+  nonzeroWeights = filter (>0) . toList
+  nonzeroes      = length . nonzeroWeights
 
 norm :: Vector v => v -> Weight
 norm v = sqrt $ v `dot` v
@@ -73,4 +87,7 @@ cosine v1 v2
 
 centroid :: Vector v => [v] -> v
 centroid vs = scale (1 / (realToFrac $ length vs)) $ sum vs
+
+dimShared :: Vector v => v -> v -> Int
+dimShared v = nonzeroes . pmul v
 

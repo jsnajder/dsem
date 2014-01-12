@@ -45,7 +45,7 @@ type Marginals = (M.Map Word Double, V.SparseVector)
 -- not good :-( ..space leaks... don't know why
 marginals :: Model -> Marginals
 marginals (_,vs) = foldl' (\(tm,cm) (t,v) -> 
-  let vx  = v `seq` V.nonzeros v
+  let vx  = v `seq` V.nonzeroWeights v
       s   = vx `seq` sum vx
       tm2 = s `seq` tm `seq` M.insert t s tm
       cm2 = v `seq` cm `seq` V.add cm v
@@ -54,14 +54,14 @@ marginals (_,vs) = foldl' (\(tm,cm) (t,v) ->
 
 targetMarginals :: Model -> M.Map Word Double
 targetMarginals (_,vs) = 
-  M.fromList $ map (\(t,v) -> (t,sum $ V.nonzeros v)) vs
+  M.fromList $ map (\(t,v) -> (t,sum $ V.nonzeroWeights v)) vs
 
 contextMarginals :: Model -> V.SparseVector
 contextMarginals (_,vs) = V.sum $ map snd vs
 
 lmiWeighting :: Marginals -> Model -> Model
 lmiWeighting (tm,cm) (cs,vs) = (cs,map f vs)
-  where n = sum $ V.nonzeros cm
+  where n = sum $ V.nonzeroWeights cm
         f (t,v) = (t,V.zipWith (\fx fxy ->
           lmi n fx (M.findWithDefault 0 t tm) fxy) cm v)
 

@@ -9,7 +9,15 @@
 
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances #-}
 
-module DSem.VectorSpaceModel where
+module DSem.VectorSpaceModel (
+  module DSem.Vector,
+  Model (..),
+  ModelIO,
+  ModelPure,
+  runModelIO,
+  runModelPure,
+  targetSim,
+  targetCosine) where
 
 import Control.Monad
 import qualified Data.Map as M
