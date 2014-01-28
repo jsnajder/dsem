@@ -41,7 +41,7 @@ main = do
     exitFailure
   m  <- Bow.readMatrix (args!!0)
   ps <- map (parse . reverse . words) . lines <$> readFile (args!!1)
-  putStrLn "word_1\tword_2\tcosine\tnorm_1\tnorm_2\tdim_shared"
+  --putStrLn "word_1\tword_2\tcosine\tnorm_1\tnorm_2\tdim_shared"
   Bow.runModelIO m $ do
     Bow.setCacheSize 100
     forM_ ps $ \(w1,w2) -> do

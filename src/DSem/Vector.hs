@@ -10,7 +10,8 @@
 module DSem.Vector (
   Vector (..),
   Weight,
-  norm,
+  norm1,
+  norm2,
   scale,
   normalize,
   sum,  
@@ -60,14 +61,19 @@ class Vector v where
   nonzeroWeights = filter (>0) . toList
   nonzeroes      = length . nonzeroWeights
 
-norm :: Vector v => v -> Weight
-norm v = sqrt $ v `dot` v
+-- L1-norm
+norm1 :: Vector v => v -> Weight
+norm1 = Data.List.sum . toList
+
+-- L2-norm
+norm2 :: Vector v => v -> Weight
+norm2 v = sqrt $ v `dot` v
 
 scale :: Vector v => Weight -> v -> v
 scale w v = map (*w) v
 
 normalize :: Vector v => v -> v
-normalize v = scale (1 / norm v) v
+normalize v = scale (1 / norm2 v) v
 
 sum :: Vector v => [v] -> v
 sum [] = empty
@@ -82,8 +88,8 @@ cosine :: Vector v => VectorSim v
 cosine v1 v2 
   | n1==0 || n2==0 = 0
   | otherwise      = v1 `dot` v2 / (n1 * n2)
-  where n1 = norm v1
-        n2 = norm v2
+  where n1 = norm2 v1
+        n2 = norm2 v2
 
 centroid :: Vector v => [v] -> v
 centroid vs = scale (1 / (realToFrac $ length vs)) $ sum vs

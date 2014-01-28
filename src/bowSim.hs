@@ -33,12 +33,13 @@ data WordSim = WordSim {
   cosine :: Double,
   norm1  :: Double,
   norm2  :: Double,
+  norm12 :: Double,
   dimShared :: Int,
   v1  :: [(Bow.Target,V.Weight)],
   v2  :: [(Bow.Target,V.Weight)],
   v12 :: [(Bow.Target,V.Weight)] }
 
-nullWordSim = WordSim (-1) 0 0 0 [] [] []
+nullWordSim = WordSim (-1) 0 0 0 0 [] [] []
 
 {-
 similarity ::
@@ -59,15 +60,17 @@ wordSim w1 w2 = do
     (Just v1,Just v2) -> do 
       v1' <- vectorDims v1
       v2' <- vectorDims v2
-      v12 <- vectorDims $ V.pmul v1 v2
+      let v12 = V.pmul v1 v2
+      v12' <- vectorDims v12
       return . Just $ WordSim {
         cosine = max 0 . min 1 $ V.cosine v1 v2, 
-        norm1  = V.norm v1,
-        norm2  = V.norm v2,
+        norm1  = V.norm2 v1,
+        norm2  = V.norm2 v2,
+        norm12 = V.norm1 v12,
         dimShared = V.dimShared v1 v2,
         v1 = v1',
         v2 = v2',
-        v12 = v12 }
+        v12 = v12' }
     _ -> return Nothing
 
 {-
@@ -83,36 +86,39 @@ arg = [
 
 main = do
   args <- getArgs
-  when (length args < 2) $ do
-    putStrLn "Usage: bowSim <bow matrix> <list of word pairs>"
+  when (length args < 3) $ do
+    putStrLn "Usage: bowSim <bow matrix> <bow contexts> <list of word pairs>"
     exitFailure
-  m  <- Bow.readMatrix (args!!0)
+  m  <- Bow.readModel (args!!0) (args!!1)
   ps <- let parse (w2:w1:_) = (parseWord w1,parseWord w2)
             parse _         = error "no parse"
-        in map (parse . reverse . words) . lines <$> readFile (args!!1)
-  f <- openFile "vectors.txt" WriteMode
+        in map (parse . reverse . words) . lines <$> readFile (args!!2)
+  f <- openFile "vector-profiles.txt" WriteMode
   putStrLn "word_1\tword_2\tcosine\tnorm_1\tnorm_2\tdim_shared"
   Bow.runModelIO m $ do
     Bow.setCacheSize 100
-    forM_ ps $ \(w1,w2) -> do
+    forM_ (zip [(1::Int)..] ps) $ \(i,(w1,w2)) -> do
       c <- fromMaybe nullWordSim <$> wordSim w1 w2
       liftIO . putStrLn $ printf "%s\t%s\t%.3f\t%.3f\t%.3f\t%d" w1 w2 
         (cosine c) (norm1 c) (norm2 c) (dimShared c)
       liftIO . hPutStrLn f $ 
-        printf "%s %s\n" w1 w2 ++ printVectorDims 30 c ++ "\n"
+        printf "(%03d) w1 = %s, w2 = %s, cos(v1,v2) = %.3f, norm2(v1) = %.2f, norm2(v2) = %.2f, norm1(v1*v2) = %.2f, dim_shared(v1,v2) = %d\n\n"
+          i w1 w2 (cosine c) (norm1 c) (norm2 c) (norm12 c) (dimShared c) ++ 
+        printVectorDims 30 c
+  hClose f
 
 printVectorDims :: Int -> WordSim -> String
 printVectorDims k s = unlines $ zipWith3 f xs1 xs2 xs12
   where xs1 = top k (v1 s)
         xs2 = top k (v2 s)
-        xs12 = top k (v12 s)
-        top k = take k . sortBy (flip $ comparing snd)
+        xs12 = top k (v12 s) ++ repeat (T.pack "",0)
+        top k = map r . take k . sortBy (flip $ comparing snd)
         f (t1,w1) (t2,w2) (t12,w12) = 
-          printf "%s\t%.3f\t%s\t%.3f\t%s\t%.3f"
-          (T.unpack t1) w1 (T.unpack t2) w2 (T.unpack t12) w12
-
-topVectorDims :: V.Vector v => Int -> v -> Bow.ModelM [(Bow.Target,V.Weight)]
-topVectorDims k v = take k . sortBy (flip $ comparing snd) <$> vectorDims v
+          --printf "%30s\t%9f\t%30s\t%9f\t%30s\t%9f"
+          printf "%11.2f %-30s\t%11.2f %-30s\t%11.2f %-30s"
+          w1 (T.unpack t1) w2 (T.unpack t2) w12 (T.unpack t12)
+        r (_,0) = (T.pack "",0)
+        r x = x
 
 -- TODO: move this to Bow module
 -- within a Bow monad, you should be able to link dimensions to targets
@@ -122,7 +128,7 @@ topVectorDims k v = take k . sortBy (flip $ comparing snd) <$> vectorDims v
 -- returns vector contexts sorted in descending order by weights
 vectorDims :: V.Vector v => v -> Bow.ModelM [(Bow.Target,V.Weight)]
 vectorDims v = do
-  ts <- Bow.getTargets
+  ts <- Bow.getContexts
   let ws = V.toList v
   return $ zip ts ws
   

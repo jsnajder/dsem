@@ -45,7 +45,7 @@ import System.IO
 import Debug.Trace
 import qualified Data.Text as T
 
-type Word    = T.Text -- TODO; convert to smallstring!
+type Word    = T.Text -- TODO: convert to smallstring!
 type Target  = Word
 type Context = Word
 type Vect    = V.SparseVector

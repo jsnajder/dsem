@@ -50,8 +50,9 @@ instance Vector SparseVector where
   
   fromAssocList = SV . M.fromList
 
+-- vector dimensions are 1-based !
 extendVector :: [(Index,Weight)] -> [Weight]
-extendVector = pad 0
+extendVector = pad 1
   where pad _ []  = []
         pad j zs@((i,w):xs) | j < i     = 0 : pad (j+1) zs
                             | otherwise = w : pad (i+1) xs
