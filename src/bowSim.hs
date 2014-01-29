@@ -102,7 +102,7 @@ main = do
       liftIO . putStrLn $ printf "%s\t%s\t%.3f\t%.3f\t%.3f\t%d" w1 w2 
         (cosine c) (norm1 c) (norm2 c) (dimShared c)
       liftIO . hPutStrLn f $ 
-        printf "(%03d) w1 = %s, w2 = %s, cos(v1,v2) = %.3f, norm2(v1) = %.2f, norm2(v2) = %.2f, norm1(v1*v2) = %.2f, dim_shared(v1,v2) = %d\n\n"
+        printf "(%04d) w1 = %s, w2 = %s, cos(v1,v2) = %.3f, norm2(v1) = %.2f, norm2(v2) = %.2f, norm1(v1*v2) = %.2f, dim_shared(v1,v2) = %d\n\n"
           i w1 w2 (cosine c) (norm1 c) (norm2 c) (norm12 c) (dimShared c) ++ 
         printVectorDims 30 c
   hClose f

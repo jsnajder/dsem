@@ -58,7 +58,7 @@ class Vector v where
   add            = zipWith (+)
   pmul           = zipWith (*)
   dot v1 v2      = Data.List.sum . nonzeroWeights $ pmul v1 v2
-  nonzeroWeights = filter (>0) . toList
+  nonzeroWeights = filter (/=0) . toList
   nonzeroes      = length . nonzeroWeights
 
 -- L1-norm
