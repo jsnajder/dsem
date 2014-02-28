@@ -104,7 +104,7 @@ main = do
       liftIO . hPutStrLn f $ 
         printf "(%04d) w1 = %s, w2 = %s, cos(v1,v2) = %.3f, norm2(v1) = %.2f, norm2(v2) = %.2f, norm1(v1*v2) = %.2f, dim_shared(v1,v2) = %d\n\n"
           i w1 w2 (cosine c) (norm1 c) (norm2 c) (norm12 c) (dimShared c) ++ 
-        printVectorDims 30 c
+        printVectorDims 50 c
   hClose f
 
 printVectorDims :: Int -> WordSim -> String
@@ -112,9 +112,9 @@ printVectorDims k s = unlines $ zipWith3 f xs1 xs2 xs12
   where xs1 = top k (v1 s)
         xs2 = top k (v2 s)
         xs12 = top k (v12 s) ++ repeat (T.pack "",0)
-        top k = map r . take k . sortBy (flip $ comparing snd)
+        top k = map r . take k . filter ((/=0).snd) . 
+                sortBy (flip $ comparing snd)
         f (t1,w1) (t2,w2) (t12,w12) = 
-          --printf "%30s\t%9f\t%30s\t%9f\t%30s\t%9f"
           printf "%11.2f %-30s\t%11.2f %-30s\t%11.2f %-30s"
           w1 (T.unpack t1) w2 (T.unpack t2) w12 (T.unpack t12)
         r (_,0) = (T.pack "",0)
@@ -131,5 +131,4 @@ vectorDims v = do
   ts <- Bow.getContexts
   let ws = V.toList v
   return $ zip ts ws
-  
 

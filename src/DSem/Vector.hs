@@ -23,7 +23,7 @@ module DSem.Vector (
 
 import Data.List hiding (insert,sum,zipWith,map)
 import Prelude hiding (zipWith,sum,map)
-import qualified Data.List (sum,map)
+import qualified Data.List as L (sum,map)
 
 ------------------------------------------------------------------------------
 
@@ -57,13 +57,13 @@ class Vector v where
 
   add            = zipWith (+)
   pmul           = zipWith (*)
-  dot v1 v2      = Data.List.sum . nonzeroWeights $ pmul v1 v2
+  dot v1 v2      = L.sum . nonzeroWeights $ pmul v1 v2
   nonzeroWeights = filter (/=0) . toList
   nonzeroes      = length . nonzeroWeights
 
 -- L1-norm
 norm1 :: Vector v => v -> Weight
-norm1 = Data.List.sum . toList
+norm1 = L.sum . L.map abs . toList
 
 -- L2-norm
 norm2 :: Vector v => v -> Weight
@@ -80,7 +80,7 @@ sum [] = empty
 sum vs = foldl1' add vs
 
 linComb :: Vector v => [(Weight,v)] -> v
-linComb = sum . Data.List.map (uncurry scale)
+linComb = sum . L.map (uncurry scale)
 
 type VectorSim v = v -> v -> Double 
 

@@ -44,7 +44,7 @@ instance Vector SparseVector where
 
   toList (SV v) = extendVector $ M.toAscList v
 
-  fromList = SV . M.fromList . zip [0..]
+  fromList = SV . M.fromList . zip [1..]
 
   toAssocList (SV v) = M.toList v
   

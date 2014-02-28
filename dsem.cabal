@@ -2,7 +2,7 @@
 -- see http://haskell.org/cabal/users-guide/
 
 name:                dsem
-version:             0.3.0.1
+version:             0.3.0.2
 synopsis:            Basic distributional semantic models
 -- description:         
 homepage:            http://github.com/jsnajder/dsem
@@ -45,11 +45,11 @@ Executable dm2dep
   Main-Is:        dm2dep.hs
   Hs-Source-Dirs: src
 
-Executable bow-pairs-sim
-  Build-Depends:  base ==4.6.*, containers ==0.5.*, utf8-string ==0.3.*, 
-                  split ==0.2.*, mtl ==2.1.*, text ==0.11.*, dequeue ==0.1.*
-  Main-Is:        bow-pairs-sim.hs
-  Hs-Source-Dirs: src
+--Executable bow-pairs-sim
+--  Build-Depends:  base ==4.6.*, containers ==0.5.*, utf8-string ==0.3.*, 
+--                  split ==0.2.*, mtl ==2.1.*, text ==0.11.*, dequeue ==0.1.*
+--  Main-Is:        bow-pairs-sim.hs
+--  Hs-Source-Dirs: src
 
 Executable conll2bow-hadoop
   Build-Depends:  base ==4.6.*, containers ==0.5.*, utf8-string ==0.3.*, 

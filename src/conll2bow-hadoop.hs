@@ -15,7 +15,7 @@
 import System.IO
 import System.Environment
 import System.Console.ParseArgs
-import Data.Maybe
+import Data.Either
 import Data.Char
 import Data.List
 import Data.List.Split
@@ -38,7 +38,7 @@ mrMap :: [Word] -> ContextIndex -> Int -> (Token -> [String]) ->
 mrMap ts ci n ft fc = 
   unlines . map showPair . filter (isTarget . fst) . concatMap pairs . 
   concatMap (windows n . parse) . lines
-  where parse = mapMaybe parseLine . filter (not . null) . splitOn delim
+  where parse = rights . map parseLine . filter (not . null) . splitOn delim
         pairs (x,xs) = [(t,c2) | t <- ft x, c <- xs, 
                                  c1 <- fc c, Just c2 <- [IM.lookup' ci c1]]
         showPair (t,c) = t ++ "\t" ++ show c

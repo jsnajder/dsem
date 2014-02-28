@@ -10,9 +10,11 @@
 module ConllReader where
 
 import System.IO
-import Control.Monad
+import Control.Applicative
+import Data.List
 import Data.Char
 import Data.Maybe
+import Data.Either
 import Data.List.Split
 import qualified Data.Map.Strict as M
 
@@ -34,14 +36,16 @@ type Corpus   = [Sentence]
 type Lemma    = String
 type Pos      = String
 type LemmaPos = (Lemma,Pos)
+type DepRel   = String
+
 
 mkSentence :: [Token] -> Sentence
 mkSentence ts = M.fromList [(ix t,t) | t <- ts]
 
-parseLine :: String -> Maybe Token
-parseLine s = parse $ words s
+parseLine :: String -> Either String Token
+parseLine s = parse $ splitOn "\t" s
   where parse (s1:s2:s3:s4:s5:_:s7:s8:_)
-          | all isDigit s1 && all isDigit s7 = Just $ Token {
+          | all isDigit s1 && all isDigit s7 = Right $ Token {
               ix      = read s1,
               form    = s2,
               lemma   = splitOn "|" s3,
@@ -49,19 +53,21 @@ parseLine s = parse $ words s
               postag  = s5,
               dephead = read s7, 
               deprel  = s8 }
-          | otherwise = Nothing
-        parse _ = Nothing
+          | otherwise = Left $ "Index and DepHead must be integers"
+        parse _ = Left $ "Cannot parse"
 
 readCorpusStr :: String -> Corpus
 readCorpusStr = 
-  map (mkSentence . mapMaybe parseLine) . splitOn [""] . 
-  map removeblank . lines
-  where removeblank = unwords . words
+  map (mkSentence . rights . map parseLine) . splitOn [""] . lines
 
 readCorpus :: FilePath -> IO Corpus
-readCorpus f = readCorpusStr `liftM` readFile f
+readCorpus f = readCorpusStr <$> readFile f
 
-type DepRel      = String
+showCorpus :: Corpus -> String
+showCorpus = unlines . map (unlines . map showToken . sentenceTokens)
+  where showToken t = intercalate "\t" $ map (\f -> f t) 
+          [show . ix, form, intercalate "|" . lemma, cpostag,
+           postag, const "_", show . dephead, deprel] 
 
 headToken :: Sentence -> Token -> Maybe Token
 headToken s t = case dephead t of
@@ -85,12 +91,15 @@ lemmaPos t = [(l,cpostag t) | l <- lemma t]
 
 -- fallbacks to wordform in case of unknown lemma
 lemmaPos' :: Token -> [LemmaPos]
-lemmaPos' t = if lemma t == [unk] then [(form t,postag t)] else lemmaPos t
+lemmaPos' t = if unknownLemma t then [(form t,postag t)] else lemmaPos t
 
 -- fallbacks to wordform in case of unknown lemma
 lemma' :: Token -> [String]
-lemma' t = if lemma t == [unk] then [form t] else lemma t
+lemma' t = if unknownLemma t then [form t] else lemma t
 
 showLP :: LemmaPos -> String
 showLP (l,p) = l ++ posSep ++ p
+
+unknownLemma :: Token -> Bool
+unknownLemma = (==[unk]) . lemma
 
