@@ -14,16 +14,14 @@ import Data.List.Split
 import qualified Data.Map.Strict as M
 import qualified Data.ByteString.UTF8 as B
 import ConllReader
-import qualified Counts as C
+import qualified Data.Counts as C
 import Control.Monad
+import Data.Either
 
 type WordCounts = C.Counts B.ByteString
 
 xMap :: (Token -> [String]) -> String -> String
-xMap f = unlines . rights . concatMap (parse . removeBlank) . lines
-  where parse [] = []
-        parse l  = maybe [] f (parseLine l)
-        removeBlank = unwords . words
+xMap f = unlines . concatMap f . rights . map parseLine . lines
 
 mrReduce :: IO ()
 mrReduce = do
@@ -40,7 +38,7 @@ main = do
   hSetEncoding stdin utf8
   hSetEncoding stdout utf8
   if length args == 0 then 
-    putStrLn "Usage: conllWordCount-hadoop [-m -[w|l|L] [-p] | -r]"
+    putStrLn "Usage: conll2counts-hadoop [-m -[w|l|L] [-p] | -r]"
   else case (args!!0) of
       "-m" -> 
         let mrMap = case (args!!1) of

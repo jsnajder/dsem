@@ -19,66 +19,69 @@ import Data.Maybe
 import qualified Data.Map.Strict as M
 import qualified DSem.Vector.SparseVector as V
 import DSem.Weighting
+import Text.Printf
 
 type Word   = String
 type Weight = Double
-type Model  = ([Word],[(Word,V.SparseVector)])
+type Matrix = [(Word,V.SparseVector)]
 type Index  = Int
 
 -- TODO: move to SparseBow
-readModel :: FilePath -> IO Model
-readModel f = do
-  (x:xs) <- lines `liftM` readFile f
-  return $ (words x, map (parse . words) xs)
+readMatrix :: FilePath -> IO Matrix
+readMatrix f = do
+  xs <- lines `liftM` readFile f
+  return $ map (parse . words) xs
   where parse (t:xs) = (t, V.fromAssocList $ map parse2 xs)
         parse _      = error "no parse"
         parse2 x = let (c,_:f) = break (==':') x
                    in (read c,read f)
 
-showModel :: Model -> String
-showModel (cs,vs) = unlines . map (intercalate "\t") $
- cs : map (\(t,v) -> t : showVect v) vs
- where showVect = map (\(i,w) -> show i ++ ":" ++ show w) . V.toAssocList
+showMatrix :: Matrix -> String
+showMatrix m = unlines . map (intercalate "\t") $
+ map (\(t,v) -> t : showVect v) m
+ where showVect = map (\(i,w) -> printf "%d:%.3f" i w) . V.toAssocList
 
 type Marginals = (M.Map Word Double, V.SparseVector)
 
 -- not good :-( ..space leaks... don't know why
-marginals :: Model -> Marginals
-marginals (_,vs) = foldl' (\(tm,cm) (t,v) -> 
+marginals :: Matrix -> Marginals
+marginals m = foldl' (\(tm,cm) (t,v) -> 
   let vx  = v `seq` V.nonzeroWeights v
       s   = vx `seq` sum vx
       tm2 = s `seq` tm `seq` M.insert t s tm
       cm2 = v `seq` cm `seq` V.add cm v
-  in (tm2,cm2)) (M.empty,V.empty) vs
+  in (tm2,cm2)) (M.empty,V.empty) m
   --(M.insert t (sum $ V.nonzeros v) tm, V.add cm v)) (M.empty,V.empty) vs
 
-targetMarginals :: Model -> M.Map Word Double
-targetMarginals (_,vs) = 
-  M.fromList $ map (\(t,v) -> (t,sum $ V.nonzeroWeights v)) vs
+targetMarginals :: Matrix -> M.Map Word Double
+targetMarginals = M.fromList . map (\(t,v) -> (t,sum $ V.nonzeroWeights v)) 
 
-contextMarginals :: Model -> V.SparseVector
-contextMarginals (_,vs) = V.sum $ map snd vs
+contextMarginals :: Matrix -> V.SparseVector
+contextMarginals = V.sum . map snd
 
-lmiWeighting :: Marginals -> Model -> Model
-lmiWeighting (tm,cm) (cs,vs) = (cs,map f vs)
+lmiWeighting :: Bool -> Marginals -> Matrix -> Matrix
+lmiWeighting nz (tm,cm) = map f
   where n = sum $ V.nonzeroWeights cm
         f (t,v) = (t,V.zipWith (\fx fxy ->
-          lmi n fx (M.findWithDefault 0 t tm) fxy) cm v)
+          let w = lmi n fx (M.findWithDefault 0 t tm) fxy
+          in if nz then max 0 w else w) cm v)
 
 arg = [
   Arg 0 (Just 'w') Nothing 
     (argDataDefaulted "LMI|PMI|LL" ArgtypeString "LMI")
     "weighting scheme (default=LMI) [other schemes not yet implemented!]",
-  Arg 1 Nothing Nothing  (argDataRequired "filename" ArgtypeString)
+  Arg 1 (Just 'n') (Just "nonnegative") Nothing
+    "remove non-negative weights",
+  Arg 2 Nothing Nothing  (argDataRequired "filename" ArgtypeString)
     "BoW file"]
 
 main = do
   args <- parseArgsIO ArgsComplete arg
-  let f = fromJust $ getArg args 1
-  m <- readModel f
+  let f = fromJust $ getArg args 2
+  m <- readMatrix f
   let tm = targetMarginals m
-  m <- readModel f
+  m <- readMatrix f
   let cm = contextMarginals m
-  m <- readModel f
-  putStr . showModel $ lmiWeighting (tm,cm) m
+  m <- readMatrix f
+  putStr . showMatrix $ lmiWeighting (gotArg args 1) (tm,cm) m
 
