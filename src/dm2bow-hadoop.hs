@@ -17,14 +17,14 @@ import System.Environment
 import qualified Data.Set as S
 import qualified Data.ByteString.UTF8 as B
 import qualified IdMap as IM
-import Data.Word (Word32)
+import Data.Word (Word64)
 import System.IO
 import Data.Maybe
 
 type Word   = B.ByteString
 type Link   = B.ByteString
 type Weight = Double
-type Index  = Word32
+type Index  = Word64
 type WMap   = IM.IdMap Index Word
 type LMap   = IM.IdMap Index Link
 
