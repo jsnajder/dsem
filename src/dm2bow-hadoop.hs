@@ -36,14 +36,14 @@ mrMap ts lm wm = unlines . mapMaybe (parse . words) . lines
                   w2' = IM.lookup' wm (B.fromString w2)
               in case (l',w2') of
                 (Just l,Just w2) -> Just $ w1 ++ "\t" ++ 
-                                    show (ix lm (l,w2)) ++ ":" ++ w
+                                    show (ix wm (l,w2)) ++ ":" ++ w
                 _ -> Nothing
           | otherwise        = Nothing
         parse _              = error "no parse"
 
-ix :: LMap -> (Index,Index) -> Index
-ix lm (i,j) = n * i + j
-  where n = fromIntegral $ IM.size lm
+ix :: WMap -> (Index,Index) -> Index
+ix wm (l,w2) = l * n + w2 + 1
+  where n = fromIntegral $ IM.size wm
 
 mrReduce :: String -> String
 mrReduce s = unlines  
@@ -62,9 +62,9 @@ main = do
   else case args!!0 of
       "-m" -> do
         ts <- (S.fromList . lines) `liftM` readFile (args!!1)
-        lm <- (IM.fromList1 . map B.fromString . lines) `liftM` 
+        lm <- (IM.fromList . map B.fromString . lines) `liftM` 
               readFile (args!!2)
-        wm <- (IM.fromList1 . map B.fromString . lines) `liftM` 
+        wm <- (IM.fromList . map B.fromString . lines) `liftM` 
               readFile (args!!3)
         interact (mrMap ts lm wm)
       "-r" -> interact mrReduce
