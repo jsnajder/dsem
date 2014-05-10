@@ -7,7 +7,7 @@
 -------------------------------------------------------------------------------}
 
 import qualified DSem.VectorSpace.BowCached as Bow
-import DSem.VectorSpace.Similarity (rankSim')
+import DSem.VectorSpace.Similarity (rankSim',cosineSim)
 import qualified DSem.Vector as V
 import qualified Data.Text as T
 import Text.Printf
@@ -43,9 +43,9 @@ main = do
   when (length args < 2) $ do
     putStrLn "Usage: bowRankSim <bow matrix> <list of word pairs>"
     exitFailure
-  m  <- Bow.readModel (args!!0) (args!!1)
-  ps <- parsePairs <$> readFile (args!!2)
-  putStrLn "word_1\tword_2\trank-sim1\trank-sim2"
+  m  <- Bow.readMatrix (args!!0)
+  ps <- parsePairs <$> readFile (args!!1)
+  putStrLn "word_1\tword_2\trank-sim-LR\trank-sim-RL"
   Bow.runModelIO m $ do
     forM_ ps $ \(w1,w2) -> do
       (s1,s2) <- rankSim w1 w2

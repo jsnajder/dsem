@@ -34,7 +34,7 @@ rankSim sm t1 t2 = do
   s  <- targetSim sm t1 t2
   case s of
     Just s -> do ss <- map fromJust `liftM` mapM (targetSim sm t1) ts
-                 return . Just $ realToFrac (rankIn s ss - 1) 
+                 return . Just $ realToFrac (rankIn s ss) 
                                  / realToFrac (length ts)
     _      -> return Nothing
 
