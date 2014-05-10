@@ -1,6 +1,6 @@
 {-------------------------------------------------------------------------------
 
- DSem.VectModel.BowCached
+ DSem.VectorSpace.BowCached
  Bag-of-words distributional model
 
  (c) 2013 Jan Snajder <jan.snajder@fer.hr>
@@ -14,8 +14,8 @@ Bow.*.Cached
 
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 
-module DSem.VectorSpaceModel.BowCached (
-  module DSem.VectorSpaceModel,
+module DSem.VectorSpace.BowCached (
+  module DSem.VectorSpace,
   Target,
   Context,
   BowCached,
@@ -29,7 +29,7 @@ module DSem.VectorSpaceModel.BowCached (
   --cacheTargets,
   --cacheAllTargets
 
-import DSem.VectorSpaceModel
+import DSem.VectorSpace
 import qualified DSem.Vector.SparseVector as V
 import Control.Monad
 import qualified Data.Text as T

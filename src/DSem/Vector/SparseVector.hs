@@ -15,10 +15,10 @@ module DSem.Vector.SparseVector
 
 import DSem.Vector
 import qualified Data.Map.Strict as M
-import Data.Word
+import Data.Word (Word64)
 import Data.Maybe
 
-type Index = Int
+type Index = Word64
 newtype SparseVector = SV (M.Map Index Weight)
   deriving (Eq,Show,Read,Ord)
 
@@ -26,7 +26,7 @@ instance Vector SparseVector where
 
   empty = SV M.empty
 
-  size (SV v) = M.size v
+  size (SV v) = fromIntegral $ M.size v
 
   zipWith f (SV v1) (SV v2) =
     SV $ M.filter (/=0) $ 

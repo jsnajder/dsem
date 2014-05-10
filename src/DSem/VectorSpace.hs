@@ -1,6 +1,6 @@
 {-------------------------------------------------------------------------------
 
- DSem.VectorSpaceModel
+ DSem.VectorSpace
  Vector space model interface
 
  (c) 2013 Jan Snajder <jan.snajder@fer.hr>
@@ -9,22 +9,23 @@
 
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances #-}
 
-module DSem.VectorSpaceModel (
+module DSem.VectorSpace (
   module DSem.Vector,
   Model (..),
   ModelIO,
   ModelPure,
   runModelIO,
   runModelPure,
-  targetSim,
-  targetCosine) where
+  existsTarget) where
 
 import Control.Monad
+import Control.Applicative
 import qualified Data.Map as M
 import qualified DSem.Vector as V
 import DSem.Vector (Vector)
 import Control.Monad.State.Strict
 import Control.Monad.Reader
+import Data.Maybe
 
 class (Vector v, Monad m) => Model m t c v | m -> v, m -> t, m -> c where
   getVector   :: t -> m (Maybe v)
@@ -41,14 +42,8 @@ runModelPure = flip runReader
 runModelIO :: a -> ModelIO a b -> IO b
 runModelIO = flip evalStateT
 
-targetSim :: Model m t c v => V.VectorSim v -> t -> t -> m (Maybe Double)
-targetSim sim t1 t2 = do 
-  v1 <- getVector t1
-  v2 <- getVector t2
-  return $ liftM2 sim v1 v2
-
-targetCosine :: Model m t c v => t -> t -> m (Maybe Double)
-targetCosine = targetSim V.cosine
+existsTarget :: Model m t c v => t -> m Bool
+existsTarget t = isJust `liftM` getVector t
 
 {-
 targetMarginals :: (VectModel m t v, Ord t) => m -> M.Map t Double

@@ -9,7 +9,7 @@
 
 -------------------------------------------------------------------------------}
 
-import qualified DSem.VectorSpaceModel.BowCached as Bow
+import qualified DSem.VectorSpace.BowCached as Bow
 import qualified DSem.Vector as V
 import qualified Data.Text as T
 import Text.Printf

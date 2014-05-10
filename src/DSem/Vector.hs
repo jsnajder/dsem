@@ -24,6 +24,7 @@ module DSem.Vector (
 import Data.List hiding (insert,sum,zipWith,map)
 import Prelude hiding (zipWith,sum,map)
 import qualified Data.List as L (sum,map)
+import Data.Word (Word64)
 
 ------------------------------------------------------------------------------
 
@@ -32,7 +33,7 @@ type Weight = Double
 class Vector v where
   empty          :: v
   -- number of stored weights
-  size           :: v -> Int
+  size           :: v -> Word64
   -- combines vectors along common dimensions
   zipWith        :: (Weight -> Weight -> Weight) -> v -> v -> v
   -- maps function over weights
@@ -44,14 +45,14 @@ class Vector v where
   -- dot product
   dot            :: v -> v -> Weight
   -- number of non-zero dimensions
-  nonzeroes      :: v -> Int
+  nonzeroes      :: v -> Word64
   -- number of non-zero dimensions
   nonzeroWeights :: v -> [Weight]
   -- from/to list conversions
   fromList       :: [Weight] -> v
   toList         :: v -> [Weight]
-  toAssocList    :: v -> [(Int,Weight)]
-  fromAssocList  :: [(Int,Weight)] -> v
+  toAssocList    :: v -> [(Word64,Weight)]
+  fromAssocList  :: [(Word64,Weight)] -> v
 
   -- default implementations:
 
@@ -59,7 +60,7 @@ class Vector v where
   pmul           = zipWith (*)
   dot v1 v2      = L.sum . nonzeroWeights $ pmul v1 v2
   nonzeroWeights = filter (/=0) . toList
-  nonzeroes      = length . nonzeroWeights
+  nonzeroes      = fromIntegral . length . nonzeroWeights
 
 -- L1-norm
 norm1 :: Vector v => v -> Weight
@@ -94,6 +95,6 @@ cosine v1 v2
 centroid :: Vector v => [v] -> v
 centroid vs = scale (1 / (realToFrac $ length vs)) $ sum vs
 
-dimShared :: Vector v => v -> v -> Int
+dimShared :: Vector v => v -> v -> Word64
 dimShared v = nonzeroes . pmul v
 
