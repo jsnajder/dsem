@@ -17,6 +17,7 @@ import DSem.Vector
 import qualified Data.Map.Strict as M
 import Data.Word (Word64)
 import Data.Maybe
+import Data.List as L
 
 type Index = Word64
 newtype SparseVector = SV (M.Map Index Weight)
@@ -36,8 +37,10 @@ instance Vector SparseVector where
         
   add (SV v1) (SV v2) = SV . M.filter (/=0) $ M.unionWith (+) v1 v2
 
-  pmul (SV v1) (SV v2) = SV . M.filter (/=0) $ M.intersectionWith (*) v1 v2
-  
+  pmul (SV v1) (SV v2) = SV $ M.intersectionWith (*) v1 v2
+
+  dot (SV v1) (SV v2) = L.sum . M.elems $ M.intersectionWith (*) v1 v2
+ 
   nonzeroWeights (SV v) = M.elems v
 
   nonzeroes = size

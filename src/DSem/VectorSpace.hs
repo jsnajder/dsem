@@ -15,12 +15,12 @@ module DSem.VectorSpace (
   ModelIO,
   ModelPure,
   runModelIO,
+  runModelIO2,
   runModelPure,
   existsTarget) where
 
 import Control.Monad
 import Control.Applicative
-import qualified Data.Map as M
 import qualified DSem.Vector as V
 import DSem.Vector (Vector)
 import Control.Monad.State.Strict
@@ -41,6 +41,9 @@ runModelPure = flip runReader
 
 runModelIO :: a -> ModelIO a b -> IO b
 runModelIO = flip evalStateT
+
+runModelIO2 :: a -> ReaderT a IO b -> IO b
+runModelIO2 = flip runReaderT
 
 existsTarget :: Model m t c v => t -> m Bool
 existsTarget t = isJust `liftM` getVector t

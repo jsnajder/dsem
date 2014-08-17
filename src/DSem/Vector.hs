@@ -64,7 +64,7 @@ class Vector v where
 
 -- L1-norm
 norm1 :: Vector v => v -> Weight
-norm1 = L.sum . L.map abs . toList
+norm1 = L.sum . L.map abs . nonzeroWeights
 
 -- L2-norm
 norm2 :: Vector v => v -> Weight
