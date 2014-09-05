@@ -11,7 +11,7 @@
 
 -------------------------------------------------------------------------------}
 
-import qualified DSem.VectorSpace.BowCached2 as Bow
+import qualified DSem.VectorSpace.Bow as Bow
 import DSem.VectorSpace.Similarity (rankSimOn2')
 import qualified DSem.Vector as V
 import qualified Data.Text as T

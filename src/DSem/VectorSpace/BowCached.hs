@@ -18,7 +18,7 @@ module DSem.VectorSpace.BowCached (
   module DSem.VectorSpace,
   Target,
   Context,
-  BowCached,
+  Bow,
   ModelM,
   Vect,
   CacheStats (..),
@@ -26,34 +26,30 @@ module DSem.VectorSpace.BowCached (
   readMatrix,
   setCacheSize,
   getCacheStats) where
-  --cacheTargets,
-  --cacheAllTargets
 
 import DSem.VectorSpace
 import qualified DSem.Vector.SparseVector as V
 import Control.Monad
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
---import Data.SmallString 
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
 import qualified Data.BoundedMap as BM
 import Data.Maybe
-import Control.Monad.State
+import Control.Monad.State.Strict
 import Control.Applicative
 import System.IO
-import Debug.Trace
-import qualified Data.Text as T
+import qualified FileDB as DB
 
 type Word    = T.Text -- TODO: convert to smallstring!
 type Target  = Word
 type Context = Word
 type Vect    = V.SparseVector
-type ModelM  = ModelIO BowCached
+type ModelM  = ModelIO Bow
 
 type Contexts    = IM.IntMap Context
 type Matrix      = BM.BoundedMap Target Vect
-type TargetIndex = M.Map Target Int   -- from targets to fileseeks
+type TargetIndex = DB.Index   -- from targets to fileseeks
 
 data CacheStats = CacheStats {
   hits      :: !Int,
@@ -61,11 +57,11 @@ data CacheStats = CacheStats {
   unknowns  :: !Int }
   deriving (Eq,Show,Read,Ord)
 
-data BowCached = BowCached {
-  stats     :: CacheStats,
-  handle    :: Handle,
-  index     :: TargetIndex,
-  matrix    :: Matrix,
+data Bow = Bow {
+  stats     :: !CacheStats,
+  handle    :: !Handle,
+  index     :: !TargetIndex,
+  matrix    :: !Matrix,
   contexts  :: Maybe Contexts }
   deriving (Show,Eq)
 
@@ -86,13 +82,13 @@ incUnknowns = modify $ \s -> let st = stats s
 getCacheStats :: ModelM CacheStats
 getCacheStats = gets stats
 
-instance Model (ModelIO BowCached) Target Context Vect where
+instance Model ModelM Target Context Vect where
  
   getVector t = do
-    m  <- gets matrix
+    m <- gets matrix
     case BM.lookup t m of
       Nothing -> do v <- readVector t
-                    if (isJust v) then do addVector t (fromJust v); incMisses
+                    if isJust v then do addVector t (fromJust v); incMisses
                       else incUnknowns
                     return v
       v       -> do incHits; return v
@@ -110,11 +106,7 @@ setCacheSize n = modify (\s -> s { matrix = BM.setBound n $ matrix s})
 
 addVector :: Target -> Vect -> ModelM ()
 addVector t v = modify (\s -> s { matrix = BM.insert t v $ matrix s} )
-
-untilM :: IO Bool -> IO a -> IO [a]
-untilM p a = do
-  t <- p
-  if t then return [] else do x <- a; xs <- untilM p a; return (x:xs)
+--addVector t v = modify (\s -> let m = matrix s in s `seq` m `seq` t `seq` v `seq` s { matrix = BM.insert t v m} )
 
 readVector :: Target -> ModelM (Maybe Vect)
 readVector t = do
@@ -141,27 +133,20 @@ cacheAllTargets :: ModelM Int
 cacheAllTargets = getTargets >>= cacheTargets
 -}
 
-mkTargetIndex :: Handle -> IO TargetIndex
-mkTargetIndex h = M.fromList <$>
-  (untilM (hIsEOF h) $ do
-    x <- hTell h
-    (t:_) <- T.words <$> T.hGetLine h
-    return (t, fromInteger x))
-
 readContexts :: FilePath -> IO Contexts
 readContexts f = 
   IM.fromList . zip [1..] . T.lines <$> T.readFile f
 
-readMatrix :: FilePath -> IO BowCached
+readMatrix :: FilePath -> IO Bow
 readMatrix f = do
   h  <- openFile f ReadMode
-  ti <- mkTargetIndex h
-  return $ BowCached { 
+  ti <- DB.mkIndex h
+  return $ Bow { 
     matrix = BM.empty defaultCacheSize, 
     handle = h, contexts = Nothing, index = ti,
     stats = CacheStats { hits = 0, misses = 0, unknowns = 0 } }
 
-readModel :: FilePath -> FilePath -> IO BowCached
+readModel :: FilePath -> FilePath -> IO Bow
 readModel fm fc = do
   m <- readMatrix fm  
   cs <- readContexts fc

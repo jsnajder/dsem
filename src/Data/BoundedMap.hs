@@ -3,10 +3,9 @@
 
 module Data.BoundedMap where
 
-import qualified Data.Map as M
+import qualified Data.Map.Strict as M
 import qualified Data.Dequeue as Q
 import Data.Maybe
-import Debug.Trace
 
 data BoundedMap k a = BM {
   dict  :: M.Map k a,
@@ -23,11 +22,13 @@ setBound n m = m { bound = n }
 
 -- don't know why, but without seqs stack space increases
 insert :: (Ord k, Show k) => k -> a -> BoundedMap k a -> BoundedMap k a
-insert k x (BM m q b) = m1 `seq` q1 `seq` BM (M.insert k x m1) (Q.pushFront q1 k) b
+insert k x (BM m q b) = 
+  m1 `seq` q1 `seq` BM (M.insert k x m1) (Q.pushFront q1 k) b
   where (m1,q1) | M.size m == b = let (Just y, q') = Q.popBack q
-                                  in (M.delete y m, q')
+                                      m' = M.delete y m
+                                  in m' `seq` q' `seq` (m', q')
                 | otherwise      = (m,q)
-  
+
 lookup :: Ord k => k -> BoundedMap k a -> Maybe a
 lookup k (BM m _ _) = M.lookup k m
 

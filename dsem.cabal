@@ -19,11 +19,12 @@ Library
   exposed-modules:
     DSem, 
     DSem.Vector, 
-    DSem.VectorSpaceModel, 
-    DSem.VectorSpaceModel.BowCached,
+    DSem.Vector.SparseVector,
+    DSem.VectorSpace, 
+    DSem.VectorSpace.Bow,
+-- TMPOFF    DSem.VectorSpaceModel.BowCached,
 -- TMPOFF   DSem.VectModel.DepModel, 
 -- TMPOFF   DSem.VectModel.SparseBoW,
-    DSem.Vector.SparseVector,
     ConllReader,
     Data.BoundedMap
   build-depends:

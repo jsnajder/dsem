@@ -1,99 +1,103 @@
 {-------------------------------------------------------------------------------
 
- DSem.VectModel.Bow
+ DSem.VectorSpace.Bow
  Bag-of-words distributional model
 
  (c) 2013 Jan Snajder <jan.snajder@fer.hr>
 
+TODO: split into: 
+Bow.Sparse
+Bow.Dense
+Bow.*.Cached
+
+!!! THIS IS A TEMPORARY VERSION !!!
+NB: This version reads in vectors from file, but does not cache.
+Implement various variants, also with an interface to a database!
+
 -------------------------------------------------------------------------------}
 
-{-# LANGUAGE TypeSynonymInstances, MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 
-module DSem.VectModel.Bow where
-{- (
-  module DSem.VectModel,
-  Word,
-  SparseBoW,
-  readModel) where -}
+module DSem.VectorSpace.Bow (
+  module DSem.VectorSpace,
+  Target,
+  Context,
+  Bow,
+  ModelM,
+  Vect,
+  readModel,
+  readMatrix) where
 
-import DSem.VectModel
+import DSem.VectorSpace
 import qualified DSem.Vector.SparseVector as V
 import Control.Monad
-import qualified Data.ByteString.UTF8 as B
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import qualified Data.Map as M
 import qualified Data.IntMap as IM
-import Control.Monad.Reader
-import Control.Monad.State
+import Data.Maybe
+import Control.Monad.State.Strict
+import Control.Applicative
+import System.IO
+import qualified FileDB as DB
 
-type Word  = B.ByteString
-type Vect = V.SparseVector
+type Word    = T.Text -- TODO: convert to smallstring!
+type Target  = Word
+type Context = Word
+type Vect    = V.SparseVector
+type ModelM  = ModelIO Bow
 
-type BowM = ModelPure Bow
-
-runModel :: Bow -> BowM a -> a
-runModel m = runModelPure m
+type Contexts    = IM.IntMap Context
+type TargetIndex = DB.Index   -- from targets to fileseeks
 
 data Bow = Bow {
-  matrix   :: M.Map Word Vect,
-  contexts :: IM.IntMap Word }
-  deriving (Show,Read,Eq,Ord)
+  handle    :: !Handle,
+  index     :: !TargetIndex,
+  contexts  :: Maybe Contexts }
+  deriving (Show,Eq)
 
---type Bow = ModelPure SparseBow Word Word V.SparseVector
-
-instance Model (Reader Bow) Word Word Vect where
+instance Model ModelM Target Context Vect where
  
-  getVector t = asks (M.lookup t . matrix) 
+  getVector = readVector
 
-  getDim = do m <- asks matrix
-              return $ case M.size m of
-                0 -> (0, 0)
-                n -> (n, V.size . V.sum $ M.elems m) --expensive!
+  getDim = do t <- gets (M.size . index)
+              c <- gets (IM.size . fromMaybe IM.empty . contexts)
+              return (t,c)
 
-  getContexts = asks (IM.elems . contexts)
+  getContexts = gets (IM.elems . fromMaybe IM.empty . contexts) 
 
-  getTargets = asks (M.keys . matrix)
+  getTargets = gets (M.keys . index)
 
-{-
-  toList (SB m _) = M.toList m
-  
-  --fromList xs = SB (M.fromList xs) Nothing
--}
+readVector :: Target -> ModelM (Maybe Vect)
+readVector t = do
+  h  <- gets handle
+  ti <- gets index
+  case M.lookup t ti of
+    Nothing -> return Nothing
+    Just i  -> do liftIO $ hSeek h AbsoluteSeek (toInteger i)
+                  Just . parseVector <$> liftIO (T.hGetLine h)
 
---readModel2 :: FilePath -> Bow ()
---readModel2 f = do
---  m <- readModel f
---  return 
+readContexts :: FilePath -> IO Contexts
+readContexts f = 
+  IM.fromList . zip [1..] . T.lines <$> T.readFile f
 
-readModel :: FilePath -> IO Bow
-readModel f = do
-  (x:xs) <- lines `liftM` readFile f
-  let cs = IM.fromList . zip [1..] . map B.fromString $ words x
-      m  = M.fromList $ map (parse . words) xs
-  return $ Bow m cs
-  where parse (t:xs) = let t'  = B.fromString t
-                           xs' = V.fromAssocList $ map parse2 xs
-                       in t' `seq` xs' `seq` (t',xs')
+readMatrix :: FilePath -> IO Bow
+readMatrix f = do
+  h  <- openFile f ReadMode
+  ti <- DB.mkIndex h
+  return $ Bow { handle = h, contexts = Nothing, index = ti }
+
+readModel :: FilePath -> FilePath -> IO Bow
+readModel fm fc = do
+  m <- readMatrix fm  
+  cs <- readContexts fc
+  return $ m { contexts = Just cs }
+
+parseVector :: T.Text -> Vect
+parseVector = parse . T.words
+  where parse (_:xs) = V.fromAssocList $ map parse2 xs
         parse _      = error "no parse"
-        parse2 x = let (c,_:f) = break (==':') x
-                       c' = c `seq` read c
-                       f' = f `seq` read f
-                   in c' `seq` f' `seq` (c',f')
-
--- TODO: leaks! check!
-readModelDense :: FilePath -> IO Bow
-readModelDense f = do
-  (x:xs) <- lines `liftM` readFile f
-  let cs = IM.fromList . zip [1..] . map B.fromString $ words x
-      m  = M.fromList $ map (parse . words) xs
-  return $ Bow m cs
-  where parse (t:cs) = let t'  = B.fromString t
-                           cs' = V.fromAssocList . filter ((>0).snd) $ 
-                                 let zs = map (\c -> let w = read c :: Double in w `seq` w) cs
-                                 in zs `seq` zip [1..] zs
-                       in t' `seq` cs' `seq` (t',cs')
-                       -- without the above, a lot of (:) constructors are
-                       -- allocated in memory. Solution would be to use
-                       -- Data.ByteString.Char8 as input, put then UTF8
-                       -- encoding fails. Look for another solution.
-        parse _      = error "no parse"
+        parse2 x = case T.split (==':') x of
+                     (c:f:_) -> (read $ T.unpack c, read $ T.unpack f)
+                     _       -> error "no parse"
 

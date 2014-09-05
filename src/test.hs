@@ -6,7 +6,7 @@
 
 -------------------------------------------------------------------------------}
 
-import qualified DSem.VectorSpace.BowCached as Bow
+import qualified DSem.VectorSpace.BowCached2 as Bow
 import DSem.VectorSpace.Similarity (rankSim')
 import qualified DSem.Vector as V
 import qualified Data.Text as T
@@ -27,11 +27,17 @@ main = do
     putStrLn "Usage: test <bow matrix>"
     exitFailure
   m  <- Bow.readMatrix (args!!0)
-  Bow.runModelIO m $ do
+  Bow.runModelIO2 m $ do
     ts <- Bow.getTargets
     liftIO . putStrLn . printf "%d targets read" $ length ts
     let t = last ts
     liftIO . putStrLn $ printf "Last target is: \"%s\"" (T.unpack t)
     Just v <- Bow.getVector t
-    liftIO . putStrLn $ printf "Norm of \"%s\" is %f" (T.unpack t) (V.norm2 v)
+    liftIO $ do
+      putStrLn $ printf "Norm of \"%s\" is %f" (T.unpack t) (V.norm2 v)
+      putStr $ "Press any key to continue..."
+      getChar
+    forM_ ts $ \t -> do
+      Just v <- Bow.getVector t
+      liftIO . putStrLn $ printf "Norm of \"%s\" is %f" (T.unpack t) (V.norm2 v)
 

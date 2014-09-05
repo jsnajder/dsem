@@ -9,7 +9,7 @@
 
 -------------------------------------------------------------------------------}
 
-import qualified DSem.VectorSpace.BowCached as Bow
+import qualified DSem.VectorSpace.BowCached2 as Bow
 import qualified DSem.Vector as V
 import qualified Data.Text as T
 import Text.Printf
@@ -22,6 +22,7 @@ import System.Exit
 import Data.Maybe
 import Data.List
 import Data.Ord
+import Data.Word (Word64)
 
 -- retains only the POS (first character after '_')
 parseWord :: String -> String
@@ -34,7 +35,7 @@ data WordSim = WordSim {
   norm1  :: Double,
   norm2  :: Double,
   norm12 :: Double,
-  dimShared :: Int,
+  dimShared :: Word64,
   v1  :: [(Bow.Target,V.Weight)],
   v2  :: [(Bow.Target,V.Weight)],
   v12 :: [(Bow.Target,V.Weight)] }
@@ -96,7 +97,6 @@ main = do
   f <- openFile "vector-profiles.txt" WriteMode
   putStrLn "word_1\tword_2\tcosine\tnorm_1\tnorm_2\tdim_shared"
   Bow.runModelIO m $ do
-    Bow.setCacheSize 100
     forM_ (zip [(1::Int)..] ps) $ \(i,(w1,w2)) -> do
       c <- fromMaybe nullWordSim <$> wordSim w1 w2
       liftIO . putStrLn $ printf "%s\t%s\t%.3f\t%.3f\t%.3f\t%d" w1 w2 

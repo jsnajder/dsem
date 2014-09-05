@@ -7,9 +7,9 @@
 -------------------------------------------------------------------------------}
 
 module DSem 
-  (module DSem.VectorSpaceModel) where
+  (module DSem.VectorSpace) where
 --   module DSem.DMemory) where
 
-import DSem.VectorSpaceModel
+import DSem.VectorSpace
 --import DSem.DMemory
 
