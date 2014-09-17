@@ -10,14 +10,17 @@
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, DeriveFoldable, InstanceSigs #-} --TMP
 
 module DSem.Vector.SparseVector
-  (module DSem.Vector,
-   SparseVector) where
+  ( module DSem.Vector
+  , readVector
+  , SparseVector ) where
 
-import DSem.Vector
-import qualified Data.Map.Strict as M
-import Data.Word (Word64)
-import Data.Maybe
 import Data.List as L
+import qualified Data.Map.Strict as M
+import Data.Maybe
+import Data.Text (Text)
+import qualified Data.Text as T
+import DSem.Vector
+import Data.Word (Word64)
 
 type Index = Word64
 newtype SparseVector = SV (M.Map Index Weight)
@@ -71,3 +74,18 @@ zipAligned f m1 m2 = M.unions $
    M.map (\x -> f Nothing (Just x)) (M.difference m2 m1)]
 -- traversing a sorted list would probably be faster
 
+-- Reads in vector from text.
+-- Vector can either be in sparse format:
+--   target index_1:weight_1 index:weight_2 ...
+-- or dense:
+--   target weight_1 weight 2 ...
+readVector :: Text -> Maybe SparseVector
+readVector s = case T.words s of
+  (_:xs) -> Just . fromAssocList $ L.zipWith parse [1..] xs
+  _      -> Nothing
+  where 
+    parse i x = case T.split (==':') x of
+                  (i:w:_) -> (read $ T.unpack i, read $ T.unpack w)
+                  (w:_)   -> (i, read $ T.unpack w)
+                  _       -> error "no parse"
+ 

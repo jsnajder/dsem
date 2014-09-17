@@ -31,10 +31,11 @@ readMatrix :: FilePath -> IO Matrix
 readMatrix f = do
   xs <- lines `liftM` readFile f
   return $ map (parse . words) xs
-  where parse (t:xs) = (t, V.fromAssocList $ map parse2 xs)
+  where parse (t:xs) = (t, V.fromAssocList $ zipWith parse2 [1..] xs)
         parse _      = error "no parse"
-        parse2 x = let (c,_:f) = break (==':') x
-                   in (read c,read f)
+        parse2 i x = case break (==':') x of
+                       (i,_:w) -> (read i, read w)
+                       (w,[])  -> (i, read w)
 
 showMatrix :: Matrix -> String
 showMatrix m = unlines . map (intercalate "\t") $
@@ -71,7 +72,7 @@ arg = [
     (argDataDefaulted "LMI|PMI|LL" ArgtypeString "LMI")
     "weighting scheme (default=LMI) [other schemes not yet implemented!]",
   Arg 1 (Just 'n') (Just "nonnegative") Nothing
-    "remove non-negative weights",
+    "retain only non-negative weights",
   Arg 2 Nothing Nothing  (argDataRequired "filename" ArgtypeString)
     "BoW file"]
 

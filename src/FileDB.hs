@@ -46,7 +46,6 @@ mkIndex h = M.fromList <$>
   (untilM (hIsEOF h) $ do
     !x <- fromIntegral <$> hTell h
     !t <- (T.copy . head . T.words) <$> T.hGetLine h
-    --return $ x `seq` t `seq` (t, x))
     return (t, x))
 
 untilM :: IO Bool -> IO a -> IO [a]

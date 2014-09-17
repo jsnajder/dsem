@@ -1,15 +1,19 @@
 {-------------------------------------------------------------------------------
 
  Computes BOW similarity scores over a list of word pairs.
- Optionally generates additional files with data about vector
+ Generates additional files with data about vector
  dimensions and weights for the two word vectors and their
  intersection.
 
  (c) 2014 Jan Snajder <jan.snajder@fer.hr>
 
+ TODO: command arguments parsing
+       code cleanup
+       rename file?
+
 -------------------------------------------------------------------------------}
 
-import qualified DSem.VectorSpace.BowCached2 as Bow
+import DSem.VectorSpace.Bow as Bow
 import qualified DSem.Vector as V
 import qualified Data.Text as T
 import Text.Printf
@@ -24,6 +28,7 @@ import Data.List
 import Data.Ord
 import Data.Word (Word64)
 
+-- TODO: remove this, do preprocessing at the command line
 -- retains only the POS (first character after '_')
 parseWord :: String -> String
 parseWord w = case break (=='_') w of
@@ -44,7 +49,7 @@ nullWordSim = WordSim (-1) 0 0 0 0 [] [] []
 
 {-
 similarity ::
-  String -> String -> Bow.ModelM (Maybe (Double,Double,Double,Int))
+  String -> String -> BowM (Maybe (Double,Double,Double,Int))
 similarity w1 w2 = do
   v1 <- Bow.getVector $ T.pack w1
   v2 <- Bow.getVector $ T.pack w2
@@ -53,7 +58,7 @@ similarity w1 w2 = do
                    V.norm v1, V.norm v2, V.dimShared v1 v2)
 -}
 
-wordSim :: String -> String -> Bow.ModelM (Maybe WordSim)
+wordSim :: String -> String -> BowM (Maybe WordSim)
 wordSim w1 w2 = do
   v1 <- Bow.getVector $ T.pack w1
   v2 <- Bow.getVector $ T.pack w2
@@ -126,7 +131,7 @@ printVectorDims k s = unlines $ zipWith3 f xs1 xs2 xs12
 -- and/or a context aware vector type
 -- maybe change distributional vector to such a type!
 -- returns vector contexts sorted in descending order by weights
-vectorDims :: V.Vector v => v -> Bow.ModelM [(Bow.Target,V.Weight)]
+vectorDims :: V.Vector v => v -> BowM [(Bow.Target,V.Weight)]
 vectorDims v = do
   ts <- Bow.getContexts
   let ws = V.toList v

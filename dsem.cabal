@@ -22,20 +22,24 @@ Library
     DSem.Vector.SparseVector,
     DSem.VectorSpace, 
     DSem.VectorSpace.Bow,
+    DSem.VectorSpace.Similarity
 -- TMPOFF    DSem.VectorSpaceModel.BowCached,
 -- TMPOFF   DSem.VectModel.DepModel, 
 -- TMPOFF   DSem.VectModel.SparseBoW,
     ConllReader,
     Data.BoundedMap
+  other-modules:
+    IdMap,
+    FileDB
   build-depends:
     base ==4.6.*, 
     containers ==0.5.*, 
-    utf8-string ==0.3.*, 
-    split ==0.2.*, 
-    vector ==0.10.*,
+    dequeue ==0.1.*,
     mtl ==2.1.*,
+    split ==0.2.*, 
     text ==0.11.*,
-    dequeue ==0.1.*
+    utf8-string ==0.3.*, 
+    vector ==0.10.*
   hs-source-dirs: src
  extensions:
     FlexibleInstances, MultiParamTypeClasses,
@@ -53,13 +57,23 @@ Executable dm2dep
 --  Hs-Source-Dirs: src
 
 Executable conll2bow-hadoop
-  Build-Depends:  base ==4.6.*, containers ==0.5.*, utf8-string ==0.3.*, 
-                  parseargs ==0.1.*, counts ==0.1.*, split ==0.2.*, dsem
+  Build-Depends:  base ==4.6.*, 
+                  containers ==0.5.*, 
+                  counts ==0.1.*,
+                  dsem,
+                  parseargs ==0.1.*,
+                  split ==0.2.*,
+                  text ==0.11.*,
+                  utf8-string ==0.3.*
   Main-Is:        conll2bow-hadoop.hs
   Hs-Source-Dirs: src
 
 Executable bow-weighting
-  Build-Depends:  base ==4.6.*, containers ==0.5.*, parseargs ==0.1.*, dsem
+  Build-Depends:  base ==4.6.*, 
+                  containers ==0.5.*, 
+                  parseargs ==0.1.*, 
+                  dsem,
+                  text ==0.11.*
   Main-Is:        bow-weighting.hs
   Hs-Source-Dirs: src
 

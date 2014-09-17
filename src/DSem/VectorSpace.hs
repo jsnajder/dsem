@@ -21,13 +21,14 @@ module DSem.VectorSpace (
 
 import Control.Monad
 import Control.Applicative
-import qualified DSem.Vector as V
+import qualified DSem.Vector
 import DSem.Vector (Vector)
 import Control.Monad.State.Strict
 import Control.Monad.Reader
 import Data.Maybe
 
-class (Vector v, Monad m) => Model m t c v | m -> v, m -> t, m -> c where
+class (Vector v, Monad m) => 
+  Model m t c v | m -> v, m -> t, m -> c where
   getVector   :: t -> m (Maybe v)
   getDim      :: m (Int,Int)
   getTargets  :: m [t]
