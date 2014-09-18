@@ -50,11 +50,11 @@ instance Vector SparseVector where
 
   toList (SV v) = extendVector $ M.toAscList v
 
-  fromList = SV . M.fromList . zip [1..]
+  fromList = SV . M.fromList . filter ((/= 0) . snd) . zip [1..]
 
   toAssocList (SV v) = M.toList v
   
-  fromAssocList = SV . M.fromList
+  fromAssocList = SV . M.fromList . filter ((/= 0) . snd)
 
 -- vector dimensions are 1-based !
 extendVector :: [(Index,Weight)] -> [Weight]
