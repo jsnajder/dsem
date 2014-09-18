@@ -16,15 +16,16 @@ Implement various variants, also with an interface to a database!
 
 -------------------------------------------------------------------------------}
 
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, FlexibleContexts #-}
 
-module DSem.VectorSpace.Bow (
-  module DSem.VectorSpace,
-  Target,
-  Context,
-  BowM,
-  readModel,
-  readMatrix) where
+module DSem.VectorSpace.Bow
+  ( BowM 
+  , Context 
+  , module DSem.VectorSpace 
+  , Target 
+  , readModel 
+  , readMatrix
+  , setTargetConversion ) where
 
 import Control.Applicative
 import Data.Char
@@ -48,15 +49,24 @@ type BowM    = ModelIO Bow
 type Contexts    = IM.IntMap Context
 type TargetIndex = DB.Index   -- from targets to fileseeks
 
-data Bow = Bow {
-  handle    :: !Handle,
-  index     :: !TargetIndex,
-  contexts  :: Maybe Contexts }
-  deriving (Show,Eq)
+data Bow = Bow 
+  { targetConversion :: Target -> Target
+  , handle           :: !Handle
+  , index            :: !TargetIndex
+  , contexts         :: Maybe Contexts }
+
+instance Targetable Target Target where
+  fromTarget = id
+  toTarget   = id
+
+instance Targetable String Target where
+  fromTarget = T.unpack
+  toTarget   = T.pack
 
 instance Model BowM Target Context SparseVector where
  
-  getVector = loadVector
+  getVector t = do f <- gets targetConversion
+                   loadVector (f t)
 
   getDim = do t <- gets (M.size . index)
               c <- gets (IM.size . fromMaybe IM.empty . contexts)
@@ -87,7 +97,11 @@ readMatrix f = do
   l <- T.hGetLine h
   when (not (isHeader l)) $ hSeek h AbsoluteSeek 0
   ti <- DB.mkIndex h
-  return $ Bow { handle = h, contexts = Nothing, index = ti }
+  return $ Bow 
+    { targetConversion = id
+    , handle   = h
+    , contexts = Nothing
+    , index    = ti }
   where isHeader = all (T.all isDigit) . T.words  
 
 readModel :: FilePath -> FilePath -> IO Bow
@@ -95,4 +109,17 @@ readModel fm fc = do
   m <- readMatrix fm  
   cs <- readContexts fc
   return $ m { contexts = Just cs }
+
+--setTargetHook :: (Target -> Target) -> BowM ()
+--setTargetHook f = modify (\bow -> bow { targetHook = f })
+
+{-
+class Targetable a where
+  toTarget   :: a -> Target
+  fromTarget :: Target -> a
+-}
+
+setTargetConversion :: Targetable a Target => (a -> a) -> BowM ()
+setTargetConversion f =
+  modify (\bow -> bow { targetConversion = toTarget . f . fromTarget })
 

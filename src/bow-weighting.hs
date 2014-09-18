@@ -38,7 +38,7 @@ readMatrix f = do
                        (w,[])  -> (i, read w)
 
 showMatrix :: Matrix -> String
-showMatrix m = unlines . map (intercalate "\t") $
+showMatrix m = unlines . map unwords $
  map (\(t,v) -> t : showVect v) m
  where showVect = map (\(i,w) -> printf "%d:%.3f" i w) . V.toAssocList
 

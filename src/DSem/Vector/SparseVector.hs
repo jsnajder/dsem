@@ -24,7 +24,7 @@ import Data.Word (Word64)
 
 type Index = Word64
 newtype SparseVector = SV (M.Map Index Weight)
-  deriving (Eq,Show,Read,Ord)
+  deriving (Eq, Show, Read, Ord)
 
 instance Vector SparseVector where
 

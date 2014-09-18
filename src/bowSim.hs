@@ -60,8 +60,8 @@ similarity w1 w2 = do
 
 wordSim :: String -> String -> BowM (Maybe WordSim)
 wordSim w1 w2 = do
-  v1 <- Bow.getVector $ T.pack w1
-  v2 <- Bow.getVector $ T.pack w2
+  v1 <- Bow.getTargetVector w1
+  v2 <- Bow.getTargetVector w2
   case (v1,v2) of
     (Just v1,Just v2) -> do 
       v1' <- vectorDims v1
@@ -78,17 +78,6 @@ wordSim w1 w2 = do
         v2 = v2',
         v12 = v12' }
     _ -> return Nothing
-
-{-
-arg = [
-  Arg 0 (Just 'l') (Just "linkage") 
-    (argDataDefaulted "a|s|c" ArgtypeString "a")
-    "linkage type (default=a)",
-  Arg 1 Nothing Nothing  (argDataRequired "bow matrix" ArgtypeString)
-    "bow matrix file",
-  Arg 2 Nothing Nothing  (argDataRequired "word pairs" ArgtypeString)
-    "word pairs file"]
--}
 
 main = do
   args <- getArgs

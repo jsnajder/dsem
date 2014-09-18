@@ -9,30 +9,39 @@
 
 {-# LANGUAGE MultiParamTypeClasses, FunctionalDependencies, FlexibleInstances #-}
 
-module DSem.VectorSpace (
-  module DSem.Vector,
-  Model (..),
-  ModelIO,
-  ModelPure,
-  runModelIO,
-  runModelIO2,
-  runModelPure,
-  existsTarget) where
+module DSem.VectorSpace
+  ( existsTarget
+  , module DSem.Vector 
+  , getTargetVector
+  , Model (..) 
+  , ModelIO 
+  , ModelPure 
+  , runModelIO 
+  , runModelIO2 
+  , runModelPure
+  , Targetable (..) ) where
 
-import Control.Monad
 import Control.Applicative
+import Control.Monad
+import Control.Monad.Reader
+import Control.Monad.State.Strict
+import Data.Maybe
 import qualified DSem.Vector
 import DSem.Vector (Vector)
-import Control.Monad.State.Strict
-import Control.Monad.Reader
-import Data.Maybe
 
-class (Vector v, Monad m) => 
+class (Monad m, Vector v) => 
   Model m t c v | m -> v, m -> t, m -> c where
   getVector   :: t -> m (Maybe v)
   getDim      :: m (Int,Int)
   getTargets  :: m [t]
-  getContexts :: m [c]
+  getContexts :: m [c] 
+
+class Targetable a t where
+  toTarget   :: a -> t
+  fromTarget :: t -> a
+
+getTargetVector :: (Model m t c v, Targetable a t) => a -> m (Maybe v)
+getTargetVector = getVector . toTarget
 
 type ModelIO a   = StateT a IO
 type ModelPure a = Reader a
