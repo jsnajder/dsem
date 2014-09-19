@@ -7,56 +7,39 @@
 
  (c) 2014 Jan Snajder <jan.snajder@fer.hr>
 
- TODO: command arguments parsing
+ TODO: add output management via command args
        code cleanup
        rename file?
 
 -------------------------------------------------------------------------------}
 
-import DSem.VectorSpace.Bow as Bow
-import qualified DSem.Vector as V
-import qualified Data.Text as T
-import Text.Printf
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
-import System.IO
-import System.Environment
-import System.Exit
-import Data.Maybe
 import Data.List
+import Data.Maybe
 import Data.Ord
 import Data.Word (Word64)
+import qualified Data.Text as T
+import qualified DSem.Vector as V
+import DSem.VectorSpace.Bow as Bow
+import System.Console.ParseArgs
+import System.Environment
+import System.Exit
+import System.IO
+import Text.Printf
 
--- TODO: remove this, do preprocessing at the command line
--- retains only the POS (first character after '_')
-parseWord :: String -> String
-parseWord w = case break (=='_') w of
-  (l,_:p:_) -> l ++ "_" ++ [p]
-  (l,_)     -> l
-
-data WordSim = WordSim {
-  cosine :: Double,
-  norm1  :: Double,
-  norm2  :: Double,
-  norm12 :: Double,
-  dimShared :: Word64,
-  v1  :: [(Bow.Target,V.Weight)],
-  v2  :: [(Bow.Target,V.Weight)],
-  v12 :: [(Bow.Target,V.Weight)] }
+data WordSim = WordSim 
+  { cosine    :: Double
+  , norm1     :: Double
+  , norm2     :: Double
+  , norm12    :: Double
+  , dimShared :: Word64
+  , v1        :: [(Bow.Target,V.Weight)]
+  , v2        :: [(Bow.Target,V.Weight)]
+  , v12       :: [(Bow.Target,V.Weight)] }
 
 nullWordSim = WordSim (-1) 0 0 0 0 [] [] []
-
-{-
-similarity ::
-  String -> String -> BowM (Maybe (Double,Double,Double,Int))
-similarity w1 w2 = do
-  v1 <- Bow.getVector $ T.pack w1
-  v2 <- Bow.getVector $ T.pack w2
-  return $ liftA2 f v1 v2
-  where f v1 v2 = (max 0 . min 1 $ V.cosine v1 v2, 
-                   V.norm v1, V.norm v2, V.dimShared v1 v2)
--}
 
 wordSim :: String -> String -> BowM (Maybe WordSim)
 wordSim w1 w2 = do
@@ -79,27 +62,47 @@ wordSim w1 w2 = do
         v12 = v12' }
     _ -> return Nothing
 
+arg = [
+  Arg 0 (Just 'p') (Just "vector-profiles") Nothing
+    "output vector profiles (instead of plain similarities)",
+  Arg 1 (Just 'c') (Just "contexts")  
+    (argDataOptional "filename" ArgtypeString)
+    "BoW contexts (only required for --vector-profiles)",
+  Arg 2 (Just 'd') (Just "dimensions")
+    (argDataDefaulted "integer" ArgtypeString "50")
+    "number of vector profile dimensions (default=50)",
+  Arg 3 Nothing Nothing  (argDataRequired "bow" ArgtypeString)
+    "BoW matrix filename",
+  Arg 4 Nothing Nothing  (argDataRequired "pairs" ArgtypeString)
+    "list of word pairs"]
+
 main = do
-  args <- getArgs
-  when (length args < 3) $ do
-    putStrLn "Usage: bowSim <bow matrix> <bow contexts> <list of word pairs>"
-    exitFailure
-  m  <- Bow.readModel (args!!0) (args!!1)
-  ps <- let parse (w2:w1:_) = (parseWord w1,parseWord w2)
+  args <- parseArgsIO ArgsComplete arg
+  let matrix   = fromJust $ getArg args 3
+      pairs    = fromJust $ getArg args 4
+  ps <- let parse (w1:w2:_) = (w1, w2)
             parse _         = error "no parse"
-        in map (parse . reverse . words) . lines <$> readFile (args!!2)
-  f <- openFile "vector-profiles.txt" WriteMode
-  putStrLn "word_1\tword_2\tcosine\tnorm_1\tnorm_2\tdim_shared"
-  Bow.runModelIO m $ do
-    forM_ (zip [(1::Int)..] ps) $ \(i,(w1,w2)) -> do
+        in map (parse . words) . lines <$> readFile pairs
+  if not $ gotArg args 0 then do
+    m <- Bow.readMatrix matrix
+    putStrLn "word_1\tword_2\tcosine\tnorm_1\tnorm_2\tdim_shared"
+    Bow.runModelIO m $ do
+      forM_ ps $ \(w1,w2) -> do
+        c <- fromMaybe nullWordSim <$> wordSim w1 w2
+        liftIO . putStrLn $ printf "%s\t%s\t%.4f\t%.4f\t%.4f\t%d" w1 w2 
+          (cosine c) (norm1 c) (norm2 c) (dimShared c)
+  else do
+    when (not $ gotArg args 1) $ usageError args "no contexts file provided"
+    let contexts = fromJust $ getArg args 1
+        dims     = read $ fromJust $ getArg args 2
+    m <- Bow.readModel matrix contexts
+    Bow.runModelIO m $ do
+    forM_ (zip [1..] ps) $ \(i,(w1,w2)) -> do
       c <- fromMaybe nullWordSim <$> wordSim w1 w2
-      liftIO . putStrLn $ printf "%s\t%s\t%.3f\t%.3f\t%.3f\t%d" w1 w2 
-        (cosine c) (norm1 c) (norm2 c) (dimShared c)
-      liftIO . hPutStrLn f $ 
-        printf "(%04d) w1 = %s, w2 = %s, cos(v1,v2) = %.3f, norm2(v1) = %.2f, norm2(v2) = %.2f, norm1(v1*v2) = %.2f, dim_shared(v1,v2) = %d\n\n"
-          i w1 w2 (cosine c) (norm1 c) (norm2 c) (norm12 c) (dimShared c) ++ 
-        printVectorDims 50 c
-  hClose f
+      liftIO . putStrLn $ 
+        printf "(%04d) w1 = %s, w2 = %s, cos(v1,v2) = %.4f, norm2(v1) = %.2f, norm2(v2) = %.2f, norm1(v1*v2) = %.2f, dim_shared(v1,v2) = %d\n\n"
+          (i::Int) w1 w2 (cosine c) (norm1 c) (norm2 c) (norm12 c) (dimShared c) ++ 
+        printVectorDims dims c
 
 printVectorDims :: Int -> WordSim -> String
 printVectorDims k s = unlines $ zipWith3 f xs1 xs2 xs12
