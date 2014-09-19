@@ -11,10 +11,10 @@
 
 module DSem.VectorSpace.Similarity where
 
-import DSem.VectorSpace
 import Control.Monad
-import DSem.Vector (Vector,VectorSim,cosine)
 import Data.Maybe
+import DSem.VectorSpace
+import DSem.Vector (Vector,VectorSim,cosine)
 
 targetSim :: (Model m t c v, Targetable a t) => 
   VectorSim v -> a -> a -> m (Maybe Double)
@@ -41,13 +41,15 @@ rankSim n sm t1 t2 = do
   ts <- getTargets
   rankSimOn ts n sm t1 t2
 
+
 rankSim' :: (Model m t c v, Targetable a t) 
   => Int -> VectorSim v -> a -> a -> m Double
 rankSim' n sm t1 t2 = fromMaybe 0 `liftM` rankSim n sm t1 t2
 
 rankSimOn :: (Model m t c v, Targetable a t)
-  => [t] -> Int -> VectorSim v -> a -> a -> m (Maybe Double)
-rankSimOn ts n sm t1 t2 = do
+  => [a] -> Int -> VectorSim v -> a -> a -> m (Maybe Double)
+rankSimOn ts n sm t1 t2 = undefined
+{- do
   s <- targetSim sm t1 t2
   case s of
     Just s -> do ss <- map fromJust `liftM` mapM (targetSim sm t1) ts
@@ -55,6 +57,7 @@ rankSimOn ts n sm t1 t2 = do
                  return . Just $ 1 - realToFrac (rank n' s ss) / realToFrac n'
     _      -> return Nothing
   where rank n x = min n . length . filter (>x) 
+-}
 
 rankSimOn' :: Model m t c v => [t] -> Int -> VectorSim v -> t -> t -> m Double
 rankSimOn' ts n sm t1 t2 = fromMaybe 0 `liftM` rankSimOn ts n sm t1 t2

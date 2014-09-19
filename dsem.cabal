@@ -77,3 +77,13 @@ Executable bow-weighting
   Main-Is:        bow-weighting.hs
   Hs-Source-Dirs: src
 
+Executable bow-sim
+  Build-Depends:  base ==4.6.*, 
+                  containers ==0.5.*, 
+                  parseargs ==0.1.*, 
+                  dsem,
+                  text ==0.11.*,
+                  mtl ==2.1.*
+  Main-Is:        bow-sim.hs
+  Hs-Source-Dirs: src
+
