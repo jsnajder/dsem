@@ -91,7 +91,7 @@ arg =
   , Arg 6 Nothing Nothing  (argDataRequired "pairs" ArgtypeString)
     "list of word pairs" ]
 
-header = "w1\tw2\tcosine\tnorm2(v1)\tnorm2(v2)\t\tnorm2(v1*v2)\t\
+header = "w1\tw2\tcos(v1,v2)\tnorm2(v1)\tnorm2(v2)\t\tnorm2(v1*v2)\t\
          \dimShared(v1,v2)\tentropy(v1)\tentropy(v2)\tjsDivergence(v1,v2)\t\
          \jaccard(v1,v2)"
 
