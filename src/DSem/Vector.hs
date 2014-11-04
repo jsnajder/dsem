@@ -109,7 +109,9 @@ dimShared :: Vector v => v -> v -> Dim
 dimShared v = nonzeroes . pmul v
 
 entropy :: Vector v => v -> Double
-entropy = negate. L.sum . nonzeroWeights . map (\p -> p * log p) . normalize
+entropy = 
+  negate. L.sum . nonzeroWeights . 
+  map (\p -> if p==0 then 0 else p * log p) . toDistribution
 
 toDistribution :: Vector v => v -> v
 toDistribution v = map (\w -> w / n) v
