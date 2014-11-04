@@ -113,8 +113,8 @@ main = do
           (cosine s) (norm1 s) (norm2 s) (dotProd s) (dimShared s) 
           (entropy1 s) (entropy2 s) (jsDiv s) (jaccard s)
   else do
-    when (not $ gotArg args 1) $ usageError args "no contexts file provided"
-    let contexts = fromJust $ getArg args 1
+    when (not $ gotArg args 3) $ usageError args "no contexts file provided"
+    let contexts = fromJust $ getArg args 3
         dims     = read $ fromJust $ getArg args 4
     m <- Bow.readModel matrix contexts
     Bow.runModelIO m $ do
