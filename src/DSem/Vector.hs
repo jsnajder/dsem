@@ -65,7 +65,7 @@ class Vector v where
 
   add            = zipWith (+)
   pmul           = zipWith (*)
-  dot v1 v2      = L.sum . nonzeroWeights $ pmul v1 v2
+  dot v1 v2      = listSum . nonzeroWeights $ pmul v1 v2
   nonzeroWeights = filter (/=0) . toList
   nonzeroes      = fromIntegral . length . nonzeroWeights
 
@@ -74,7 +74,7 @@ nonzeroDims = L.map fst . filter ((/=0) . snd) . toAssocList
 
 -- L1-norm
 norm1 :: Vector v => v -> Weight
-norm1 = L.sum . L.map abs . nonzeroWeights
+norm1 = listSum . L.map abs . nonzeroWeights
 
 -- L2-norm
 norm2 :: Vector v => v -> Weight
@@ -110,12 +110,12 @@ dimShared v = nonzeroes . pmul v
 
 entropy :: Vector v => v -> Double
 entropy = 
-  negate. L.sum . nonzeroWeights . 
+  negate. listSum . nonzeroWeights . 
   map (\p -> if p==0 then 0 else p * log p) . toDistribution
 
 toDistribution :: Vector v => v -> v
 toDistribution v = map (\w -> w / n) v
-  where n = L.sum $ nonzeroWeights v
+  where n = listSum $ nonzeroWeights v
 
 -- TODO: Move to VectorSpace.Similarity
 klDivergence :: Vector v => v -> v -> Double
@@ -124,7 +124,7 @@ klDivergence v1 v2 = klDivergence' (toDistribution v1) (toDistribution v2)
 -- Assumes vectors are distributions.
 klDivergence' :: Vector v => v -> v -> Double
 klDivergence' v1 v2 = 
-  L.sum . nonzeroWeights $ 
+  listSum . nonzeroWeights $ 
   zipWith (\p q -> if p==0 then 0 else p * log (p / q)) v1 v2
 
 jsDivergence :: Vector v => v -> v -> Double
@@ -135,6 +135,8 @@ jsDivergence v1 v2 = (klDivergence' p m + klDivergence' q m) / 2
 
 jaccardIndex :: Vector v => v -> v -> Double
 jaccardIndex v1 v2 = m / n 
-  where m = L.sum . nonzeroWeights $ zipWith min v1 v2 
-        n = L.sum . nonzeroWeights $ zipWith max v1 v2
+  where m = listSum . nonzeroWeights $ zipWith min v1 v2 
+        n = listSum . nonzeroWeights $ zipWith max v1 v2
+
+listSum = foldl' (+) 0 
 
