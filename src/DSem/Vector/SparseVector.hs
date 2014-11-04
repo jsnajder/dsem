@@ -36,13 +36,17 @@ instance Vector SparseVector where
     SV $ M.filter (/=0) $ 
     zipAligned (\w1 w2 -> f (fromMaybe 0 w1) (fromMaybe 0 w2)) v1 v2
   
-  map f (SV v) = SV (M.map f v)
+  --map f (SV v) = SV (M.map f v)
+  map f (SV v) = SV (M.map (\x -> x `seq` f x) v) -- no effect
         
-  add (SV v1) (SV v2) = SV . M.filter (/=0) $ M.unionWith (+) v1 v2
+--  add (SV v1) (SV v2) = SV . M.filter (/=0) $ M.unionWith (+) v1 v2
+  add (SV v1) (SV v2) = SV . M.filter (/=0) $ M.unionWith (\x1 x2 -> x1 `seq` x2 `seq` x1+x2 ) v1 v2  -- the same, though
 
-  pmul (SV v1) (SV v2) = SV $ M.intersectionWith (*) v1 v2
+  --pmul (SV v1) (SV v2) = SV $ M.intersectionWith (*) v1 v2
+  pmul (SV v1) (SV v2) = SV $ M.intersectionWith (\x1 x2 -> x1 `seq` x2 `seq` x1*x2) v1 v2  -- all the same, though
 
-  dot (SV v1) (SV v2) = L.sum . M.elems $ M.intersectionWith (*) v1 v2
+  --dot (SV v1) (SV v2) = L.sum . M.elems $ M.intersectionWith (*) v1 v2
+  dot (SV v1) (SV v2) = foldl' (+) 0 . M.elems $ M.intersectionWith (\x1 x2 -> x1 `seq` x2 `seq` x1*x2) v1 v2  -- a bit better (481 -> 463 MB)
  
   nonzeroWeights (SV v) = M.elems v
 

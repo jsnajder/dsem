@@ -28,11 +28,12 @@ module DSem.VectorSpace.Bow
   , setTargetConversion ) where
 
 import Control.Applicative
-import Data.Char
 import Control.Monad.State.Strict
 import qualified Data.IntMap as IM
 import qualified Data.Map as M
+import Data.Char
 import Data.Maybe
+import Debug.Trace
 import Control.Monad
 import qualified Data.Text as T
 import qualified Data.Text.IO as T

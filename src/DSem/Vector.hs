@@ -7,19 +7,25 @@
 
 -------------------------------------------------------------------------------}
 
-module DSem.Vector (
-  Vector (..),
-  Weight,
-  norm1,
-  norm2,
-  scale,
-  normalize,
-  sum,  
-  linComb,
-  VectorSim,
-  cosine,
-  centroid,
-  dimShared) where  
+module DSem.Vector 
+  ( Vector (..)
+  , Weight
+  , norm1
+  , norm2
+  , scale
+  , normalize
+  , sum
+  , linComb
+  , VectorSim
+  , cosine
+  , centroid
+  , dimShared
+  , entropy
+  , klDivergence
+  , jsDivergence
+  , jaccardIndex
+  , toDistribution
+  , nonzeroDims ) where  
 
 import Data.List hiding (insert,sum,zipWith,map)
 import Prelude hiding (zipWith,sum,map)
@@ -29,14 +35,15 @@ import Data.Word (Word64)
 ------------------------------------------------------------------------------
 
 type Weight = Double
+type Dim    = Word64
 
 class Vector v where
   empty          :: v
   -- number of stored weights
-  size           :: v -> Word64
+  size           :: v -> Dim
   -- combines vectors along common dimensions
   zipWith        :: (Weight -> Weight -> Weight) -> v -> v -> v
-  -- maps function over weights
+  -- maps function over weights ---> TODO: ill-defined: behaves differently for sparse and non sparse!
   map            :: (Weight -> Weight) -> v -> v
   -- vector addition
   add            :: v -> v -> v
@@ -45,14 +52,14 @@ class Vector v where
   -- dot product
   dot            :: v -> v -> Weight
   -- number of non-zero dimensions
-  nonzeroes      :: v -> Word64
-  -- number of non-zero dimensions
+  nonzeroes      :: v -> Dim 
+  -- nonzero wieghts
   nonzeroWeights :: v -> [Weight]
   -- from/to list conversions
   fromList       :: [Weight] -> v
   toList         :: v -> [Weight]
-  toAssocList    :: v -> [(Word64,Weight)]
-  fromAssocList  :: [(Word64,Weight)] -> v
+  toAssocList    :: v -> [(Dim,Weight)]
+  fromAssocList  :: [(Dim,Weight)] -> v
 
   -- default implementations:
 
@@ -61,6 +68,9 @@ class Vector v where
   dot v1 v2      = L.sum . nonzeroWeights $ pmul v1 v2
   nonzeroWeights = filter (/=0) . toList
   nonzeroes      = fromIntegral . length . nonzeroWeights
+
+nonzeroDims :: Vector v => v -> [Dim]
+nonzeroDims = L.map fst . filter ((/=0) . snd) . toAssocList
 
 -- L1-norm
 norm1 :: Vector v => v -> Weight
@@ -95,6 +105,34 @@ cosine v1 v2
 centroid :: Vector v => [v] -> v
 centroid vs = scale (1 / (realToFrac $ length vs)) $ sum vs
 
-dimShared :: Vector v => v -> v -> Word64
+dimShared :: Vector v => v -> v -> Dim
 dimShared v = nonzeroes . pmul v
+
+entropy :: Vector v => v -> Double
+entropy = negate. L.sum . nonzeroWeights . map (\p -> p * log p) . normalize
+
+toDistribution :: Vector v => v -> v
+toDistribution v = map (\w -> w / n) v
+  where n = L.sum $ nonzeroWeights v
+
+-- TODO: Move to VectorSpace.Similarity
+klDivergence :: Vector v => v -> v -> Double
+klDivergence v1 v2 = klDivergence' (toDistribution v1) (toDistribution v2)
+
+-- Assumes vectors are distributions.
+klDivergence' :: Vector v => v -> v -> Double
+klDivergence' v1 v2 = 
+  L.sum . nonzeroWeights $ 
+  zipWith (\p q -> if p==0 then 0 else p * log (p / q)) v1 v2
+
+jsDivergence :: Vector v => v -> v -> Double
+jsDivergence v1 v2 = (klDivergence' p m + klDivergence' q m) / 2
+  where p = toDistribution v1
+        q = toDistribution v2
+        m = scale (1/2) $ p `add` q 
+
+jaccardIndex :: Vector v => v -> v -> Double
+jaccardIndex v1 v2 = m / n 
+  where m = L.sum . nonzeroWeights $ zipWith min v1 v2 
+        n = L.sum . nonzeroWeights $ zipWith max v1 v2
 

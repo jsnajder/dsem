@@ -2,7 +2,7 @@
 -- see http://haskell.org/cabal/users-guide/
 
 name:                dsem
-version:             0.3.0.2
+version:             0.1.0.0
 synopsis:            Basic distributional semantic models
 -- description:         
 homepage:            http://github.com/jsnajder/dsem
