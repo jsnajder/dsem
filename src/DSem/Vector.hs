@@ -113,9 +113,12 @@ entropy =
   negate. listSum . nonzeroWeights . 
   map (\p -> if p==0 then 0 else p * log p) . toDistribution
 
+-- Negative weights are converted to positive... 
+-- there's no real justification for doing so
 toDistribution :: Vector v => v -> v
-toDistribution v = map (\w -> w / n) v
-  where n = listSum $ nonzeroWeights v
+toDistribution v = map (\w -> w / n) v'
+  where n  = listSum $ nonzeroWeights v'
+        v' = map abs v
 
 -- TODO: Move to VectorSpace.Similarity
 klDivergence :: Vector v => v -> v -> Double
