@@ -17,7 +17,9 @@
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Trans
+import Data.Function
 import Data.List
+import Data.List.Split
 import Data.Maybe
 import Data.Ord
 import Data.Word (Word64)
@@ -73,6 +75,12 @@ wordSim w1 w2 = do
         , v12       = v12' }
     _ -> return Nothing
 
+phraseSim :: String -> String -> String -> BowM (Maybe WordSim)
+phraseSim sep p1 p2 = 
+  maximumBy (compare `on` (cosine <$>)) <$> 
+  sequence [wordSim w1 w2 | w1 <- split p1, w2 <- split p2]
+  where split = splitOn sep
+
 arg = 
   [ Arg 0 (Just 'p') (Just "vector-profiles") Nothing
     "output vector profiles (instead of plain similarities)"
@@ -80,15 +88,20 @@ arg =
     "output header with field descriptions"
   , Arg 2 (Just 'r') (Just "remove-words") Nothing
     "remove word pairs from output"
-  , Arg 3 (Just 'c') (Just "contexts")  
+  , Arg 3 (Just 'm') (Just "multiwords") Nothing
+    "compute multiword phrase similarity as max word cosine similarity"
+  , Arg 4 (Just 'w') (Just "word-separator") 
+    (argDataDefaulted "string" ArgtypeString "-")
+    "separator for words in a phrase (default=\"-\")"
+  , Arg 5 (Just 'c') (Just "contexts")  
     (argDataOptional "filename" ArgtypeString)
     "BoW contexts (only required for --vector-profiles)"
-  , Arg 4 (Just 'd') (Just "dimensions")
+  , Arg 6 (Just 'd') (Just "dimensions")
     (argDataDefaulted "integer" ArgtypeString "50")
     "number of vector profile dimensions (default=50)"
-  , Arg 5 Nothing Nothing  (argDataRequired "bow" ArgtypeString)
+  , Arg 7 Nothing Nothing  (argDataRequired "bow" ArgtypeString)
     "BoW matrix filename"
-  , Arg 6 Nothing Nothing  (argDataRequired "pairs" ArgtypeString)
+  , Arg 8 Nothing Nothing  (argDataRequired "pairs" ArgtypeString)
     "list of word pairs" ]
 
 header = "w1\tw2\tcos(v1,v2)\tnorm2(v1)\tnorm2(v2)\t\tnorm2(v1*v2)\t\
@@ -97,8 +110,10 @@ header = "w1\tw2\tcos(v1,v2)\tnorm2(v1)\tnorm2(v2)\t\tnorm2(v1*v2)\t\
 
 main = do
   args <- parseArgsIO ArgsComplete arg
-  let matrix   = fromJust $ getArg args 5
-      pairs    = fromJust $ getArg args 6
+  let matrix = fromJust $ getArg args 7
+      pairs  = fromJust $ getArg args 8
+      sep    = fromJust $ getArg args 4
+      sim    = if gotArg args 3 then phraseSim sep else wordSim
   ps <- let parse (w1:w2:_) = (w1, w2)
             parse _         = error "no parse"
         in map (parse . words) . lines <$> readFile pairs
@@ -107,19 +122,19 @@ main = do
     when (gotArg args 1) $ putStrLn header
     Bow.runModelIO m $ do
       forM_ ps $ \(w1,w2) -> do
-        s <- fromMaybe nullWordSim <$> wordSim w1 w2
+        s <- fromMaybe nullWordSim <$> sim w1 w2
         when (not $ gotArg args 2) . liftIO . putStr $ printf "%s\t%s\t" w1 w2
         liftIO . putStrLn $ printf "%f\t%f\t%f\t%f\t%d\t%f\t%f\t%f\t%f"
           (cosine s) (norm1 s) (norm2 s) (dotProd s) (dimShared s) 
           (entropy1 s) (entropy2 s) (jsDiv s) (jaccard s)
   else do
-    when (not $ gotArg args 3) $ usageError args "no contexts file provided"
-    let contexts = fromJust $ getArg args 3
-        dims     = read $ fromJust $ getArg args 4
+    when (not $ gotArg args 5) $ usageError args "no contexts file provided"
+    let contexts = fromJust $ getArg args 5
+        dims     = read $ fromJust $ getArg args 6
     m <- Bow.readModel matrix contexts
     Bow.runModelIO m $ do
     forM_ (zip [1..] ps) $ \(i,(w1,w2)) -> do
-      s <- fromMaybe nullWordSim <$> wordSim w1 w2
+      s <- fromMaybe nullWordSim <$> sim w1 w2
       liftIO . putStrLn $ 
         printf "(%04d) w1 = %s, w2 = %s, cos(v1,v2) = %.4f, \
                \norm2(v1) = %.2f, norm2(v2) = %.2f, norm2(v1*v2) = %.2f, \

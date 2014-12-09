@@ -39,7 +39,8 @@ Library
     split ==0.2.*, 
     text ==0.11.*,
     utf8-string ==0.3.*, 
-    vector ==0.10.*
+    vector ==0.10.*,
+    parseargs ==0.1.*
   hs-source-dirs: src
  extensions:
     FlexibleInstances, MultiParamTypeClasses,
@@ -85,7 +86,8 @@ Executable bow-sim
                   parseargs ==0.1.*, 
                   dsem,
                   text ==0.11.*,
-                  mtl ==2.1.*
+                  mtl ==2.1.*,
+                  split ==0.2.*
 
 Executable bow-sim-static
   Main-Is:        bow-sim.hs
@@ -96,5 +98,6 @@ Executable bow-sim-static
                   parseargs ==0.1.*, 
                   dsem,
                   text ==0.11.*,
-                  mtl ==2.1.*
+                  mtl ==2.1.*,
+                  split ==0.2.*
 

@@ -13,3 +13,7 @@ izmoriti iznervirati
 kajakaš gospodin
 apartan agregat
 konfor katekizam
+apartan katekizam
+konfor agregat
+konfor-apartan agregat-katekizam
+konfor-bla katekizam-bla-bla-katekizam
