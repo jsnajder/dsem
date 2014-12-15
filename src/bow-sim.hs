@@ -60,7 +60,7 @@ wordSim w1 w2 = do
       let v12 = V.pmul v1 v2
       v12' <- vectorDims v12
       return . Just $ WordSim 
-        { cosine    = max 0 . min 1 $ V.cosine v1 v2
+        { cosine    = {-max 0 . min 1 $-} V.cosine v1 v2
         , norm1     = V.norm2 v1
         , norm2     = V.norm2 v2
         , dotProd   = sum $ V.nonzeroWeights v12
