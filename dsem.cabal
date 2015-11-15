@@ -26,7 +26,6 @@ Library
 -- TMPOFF    DSem.VectorSpaceModel.BowCached,
 -- TMPOFF   DSem.VectModel.DepModel, 
 -- TMPOFF   DSem.VectModel.SparseBoW,
-    ConllReader,
     Data.BoundedMap
   other-modules:
     IdMap,
@@ -40,16 +39,17 @@ Library
     text ==0.11.*,
     utf8-string ==0.3.*, 
     vector ==0.10.*,
-    parseargs ==0.1.*
-  hs-source-dirs: src
+    parseargs ==0.1.*,
+    conll-corpus ==0.1.*
+ hs-source-dirs: src
  extensions:
     FlexibleInstances, MultiParamTypeClasses,
     FunctionalDependencies, FlexibleInstances
 
-Executable dm2dep
-  Build-Depends:  base ==4.6.*, containers ==0.5.*, utf8-string ==0.3.*
-  Main-Is:        dm2dep.hs
-  Hs-Source-Dirs: src
+--Executable dm2dep
+--  Build-Depends:  base ==4.6.*, containers ==0.5.*, utf8-string ==0.3.*
+--  Main-Is:        dm2dep.hs
+--  Hs-Source-Dirs: src
 
 --Executable bow-pairs-sim
 --  Build-Depends:  base ==4.6.*, containers ==0.5.*, utf8-string ==0.3.*, 
@@ -57,17 +57,41 @@ Executable dm2dep
 --  Main-Is:        bow-pairs-sim.hs
 --  Hs-Source-Dirs: src
 
-Executable conll2bow-hadoop
+--Executable conll2bow-hadoop
+--  Build-Depends:  base ==4.6.*, 
+--                  containers ==0.5.*, 
+--                  counts ==0.1.*,
+--                  dsem,
+--                  parseargs ==0.1.*,
+--                  split ==0.2.*,
+--                  text ==0.11.*,
+--                  utf8-string ==0.3.*,
+--                  conll-corpus ==0.1.*
+--  Main-Is:        conll2bow-hadoop.hs
+--  Hs-Source-Dirs: src
+
+Executable conll2bow
   Build-Depends:  base ==4.6.*, 
                   containers ==0.5.*, 
                   counts ==0.1.*,
-                  dsem,
                   parseargs ==0.1.*,
                   split ==0.2.*,
                   text ==0.11.*,
-                  utf8-string ==0.3.*
-  Main-Is:        conll2bow-hadoop.hs
+                  conll-corpus ==0.1.*
+  Main-Is:        conll2bow.hs
   Hs-Source-Dirs: src
+
+Executable conll2bow-static
+  Build-Depends:  base ==4.6.*, 
+                  containers ==0.5.*, 
+                  counts ==0.1.*,
+                  parseargs ==0.1.*,
+                  split ==0.2.*,
+                  text ==0.11.*,
+                  conll-corpus ==0.1.*
+  Main-Is:        conll2bow.hs
+  Hs-Source-Dirs: src
+  ghc-options:    -static -optl-pthread -optl-static
 
 Executable bow-weighting
   Build-Depends:  base ==4.6.*, 
