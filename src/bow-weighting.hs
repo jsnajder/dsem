@@ -6,8 +6,6 @@
 
  (c) 2013 Jan Snajder <jan.snajder@fer.hr>
 
- TODO: Add PMI and LL weighting schemes
-
 -------------------------------------------------------------------------------}
 
 import System.IO
@@ -23,7 +21,7 @@ import Text.Printf
 
 type Word   = String
 type Weight = Double
-type Matrix = [(Word,V.SparseVector)]
+type Matrix = [(Word, V.SparseVector)]
 type Index  = Int
 
 -- TODO: move to SparseBow
@@ -60,7 +58,6 @@ targetMarginals = M.fromList . map (\(t,v) -> (t,sum $ V.nonzeroWeights v))
 contextMarginals :: Matrix -> V.SparseVector
 contextMarginals = V.sum . map snd
 
-
 weighting :: Weighting -> Bool -> Marginals -> Matrix -> Matrix
 weighting wf nz (tm,cm) = map f
   where n = sum $ V.nonzeroWeights cm
@@ -69,10 +66,10 @@ weighting wf nz (tm,cm) = map f
           in if nz then max 0 w else w) cm v)
 
 arg = [
-  Arg 0 (Just 'w') Nothing 
-    (argDataDefaulted "LMI|PMI|LL" ArgtypeString "LMI")
-    "weighting scheme (default=LMI) [other schemes not yet implemented!]",
-  Arg 1 (Just 'n') (Just "nonnegative") Nothing
+  Arg 0 (Just 'w') (Just "weighting")
+    (argDataDefaulted "LMI|PMI" ArgtypeString "PMI")
+    "weighting scheme (default=PMI)",
+  Arg 1 (Just 'p') (Just "positive") Nothing
     "retain only non-negative weights",
   Arg 2 Nothing Nothing  (argDataRequired "filename" ArgtypeString)
     "BoW file"]
@@ -85,5 +82,8 @@ main = do
   m <- readMatrix f
   let cm = contextMarginals m
   m <- readMatrix f
-  putStr . showMatrix $ weighting lmi (gotArg args 1) (tm,cm) m
+  let wf = case getRequiredArg args 0 of
+             "LMI" -> lmi
+             _     -> pmi
+  putStr . showMatrix $ weighting wf (gotArg args 1) (tm, cm) m
 
