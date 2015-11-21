@@ -13,12 +13,16 @@ module DSem.Weighting where
 
 import qualified Data.Map as M
 
+--               n         f(x)      f(y)      f(x,y)
+type Weighting = Double -> Double -> Double -> Double -> Double
+
 -- pointwise mutual information
-pmi :: Double -> Double -> Double -> Double -> Double
+pmi :: Weighting
 pmi n fx fy fxy 
   | n * fx * fy * fxy == 0 = 0
   | otherwise = log fxy + log n - log fx - log fy
 
 -- local mutual information
-lmi :: Double -> Double -> Double -> Double -> Double
+lmi :: Weighting
 lmi n fx fy fxy = fxy * pmi n fx fy fxy
+

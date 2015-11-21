@@ -60,11 +60,12 @@ targetMarginals = M.fromList . map (\(t,v) -> (t,sum $ V.nonzeroWeights v))
 contextMarginals :: Matrix -> V.SparseVector
 contextMarginals = V.sum . map snd
 
-lmiWeighting :: Bool -> Marginals -> Matrix -> Matrix
-lmiWeighting nz (tm,cm) = map f
+
+weighting :: Weighting -> Bool -> Marginals -> Matrix -> Matrix
+weighting wf nz (tm,cm) = map f
   where n = sum $ V.nonzeroWeights cm
         f (t,v) = (t,V.zipWith (\fx fxy ->
-          let w = lmi n fx (M.findWithDefault 0 t tm) fxy
+          let w = wf n fx (M.findWithDefault 0 t tm) fxy
           in if nz then max 0 w else w) cm v)
 
 arg = [
@@ -84,5 +85,5 @@ main = do
   m <- readMatrix f
   let cm = contextMarginals m
   m <- readMatrix f
-  putStr . showMatrix $ lmiWeighting (gotArg args 1) (tm,cm) m
+  putStr . showMatrix $ weighting lmi (gotArg args 1) (tm,cm) m
 
