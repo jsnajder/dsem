@@ -35,7 +35,6 @@ type Index          = Int
 type WordCounts     = C.Counts Text
 type ContextIndex   = IM.IdMap Index Word
 
-{-
 mrMap 
   :: Set Word
   -> ContextIndex 
@@ -48,7 +47,6 @@ mrMap ts ci n ft fc =
   filter ((`S.member` ts) . fst) . concatMap pairs . windows n . sentenceTokens
   where pairs (x,xs) = [(T.pack $ t, c2) | t <- ft x, c <- xs, 
                         c1 <- fc c, Just c2 <- [IM.lookup' ci $ T.pack c1]]
--}
 
 -- Targets found in a sentence
 sentenceTargets :: (Token -> [String]) -> Set Word -> Sentence -> Set Word
@@ -64,7 +62,8 @@ sampleSentenceTargets
   -> IO (Set Word)
 sampleSentenceTargets sp ft ts = sampleTargets sp . sentenceTargets ft ts
 
-mrMap
+{-
+mrMap2
   :: Set Word
   -> SamplingProportions
   -> ContextIndex 
@@ -73,12 +72,13 @@ mrMap
   -> (Token -> [String]) 
   -> Sentence 
   -> IO [(Word,Index)]
-mrMap ts sp ci n ft fc s = do
+mrMap2 ts sp ci n ft fc s = do
   ts' <- sampleSentenceTargets sp ft ts s
   return . filter ((`S.member` ts') . fst) . concatMap pairs . windows n $ 
     sentenceTokens s
   where pairs (x,xs) = [(T.pack $ t, c2) | t <- ft x, c <- xs, 
                         c1 <- fc c, Just c2 <- [IM.lookup' ci $ T.pack c1]]
+-}
 
 mrMap2
   :: Set Word
@@ -116,20 +116,18 @@ mrReduce xs = vs
         ys = map (\((t,c),f) -> (t,(c,f))) cs
         vs = [ (t,map snd x) | x@((t,_):_) <- groupBy ((==) `on` fst) ys]
 
-{-
 mkModel
   :: Set Word
   -> ContextIndex 
   -> Int 
   -> (Token -> [String]) 
   -> (Token -> [String])
-  -> SamplingProportions
   -> Corpus
   -> [(Word,[(Index,Int)])]
-mkModel ts ci n ft fc sp = mrReduce . concatMap (mrMap ts ci n ft fc)
--}
+mkModel ts ci n ft fc = mrReduce . concatMap (mrMap ts ci n ft fc)
 
-mkModel
+{-
+mkModel2
   :: Set Word
   -> SamplingProportions
   -> ContextIndex
@@ -138,8 +136,15 @@ mkModel
   -> (Token -> [String])
   -> Corpus
   -> IO [(Word, [(Index, Int)])]
-mkModel ts sp ci n ft fc c = 
+mkModel2 ts sp ci n ft fc c = 
   mrReduce . concat <$> mapM (mrMap ts sp ci n ft fc) c
+-}
+
+foldM' :: (Monad m) => (a -> b -> m a) -> a -> [b] -> m a
+foldM' _ z [] = return z
+foldM' f z (x:xs) = do
+  z' <- f z x
+  z' `seq` foldM' f z' xs
 
 mkModel2
   :: Set Word
@@ -151,7 +156,7 @@ mkModel2
   -> Corpus
   -> IO [(Word, [(Index, Int)])]
 mkModel2 ts sp ci n ft fc c = do
-  xs <- foldM (\cs s -> do
+  xs <- foldM' (\cs s -> do
     cs' <- mrMap2 ts sp ci n ft fc s
     return $ cs `seq` cs `C.union` cs') C.empty c
   let cs = C.counts xs
@@ -237,5 +242,6 @@ main = do
           Nothing -> return M.empty
           Just f  -> readProportions f
   c  <- readCorpus $ getRequiredArg args 9
+  --T.putStr . T.unlines . map showVec $ mkModel ts ci w ft fc c
   (T.unlines . map showVec <$> mkModel2 ts sp ci w ft fc c) >>= T.putStr
 
