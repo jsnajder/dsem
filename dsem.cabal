@@ -26,7 +26,7 @@ Library
 -- TMPOFF    DSem.VectorSpaceModel.BowCached,
 -- TMPOFF   DSem.VectModel.DepModel, 
 -- TMPOFF   DSem.VectModel.SparseBoW,
-    Data.BoundedMap
+--    Data.BoundedMap
   other-modules:
     IdMap,
     FileDB
@@ -40,7 +40,8 @@ Library
     utf8-string ==0.3.*, 
     vector ==0.10.*,
     parseargs ==0.1.*,
-    conll-corpus ==0.1.*
+    conll-corpus ==0.1.*,
+    counts ==0.1.*
  hs-source-dirs: src
  extensions:
     FlexibleInstances, MultiParamTypeClasses,
@@ -77,7 +78,8 @@ Executable conll2bow
                   parseargs ==0.1.*,
                   split ==0.2.*,
                   text ==0.11.*,
-                  conll-corpus ==0.1.*
+                  conll-corpus ==0.1.*,
+                  random ==1.0.*
   Main-Is:        conll2bow.hs
   Hs-Source-Dirs: src
 
@@ -88,7 +90,8 @@ Executable conll2bow-static
                   parseargs ==0.1.*,
                   split ==0.2.*,
                   text ==0.11.*,
-                  conll-corpus ==0.1.*
+                  conll-corpus ==0.1.*,
+                  random ==1.0.*
   Main-Is:        conll2bow.hs
   Hs-Source-Dirs: src
   ghc-options:    -static -optl-pthread -optl-static
