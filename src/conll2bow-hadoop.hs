@@ -25,6 +25,7 @@ import qualified Data.Counts as C
 import qualified IdMap as IM
 import qualified Data.Set as S
 import ConllReader
+import Prelude hiding (Word)
 
 type Word           = String
 type Index          = Int

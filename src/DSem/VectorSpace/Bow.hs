@@ -27,6 +27,7 @@ module DSem.VectorSpace.Bow
   , readMatrix
   , setTargetConversion ) where
 
+import Prelude hiding (Word)
 import Control.Applicative
 import Control.Monad.State.Strict
 import qualified Data.IntMap as IM

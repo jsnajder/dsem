@@ -17,6 +17,7 @@ import Data.Maybe
 import qualified Data.Map.Strict as M
 import qualified DSem.Vector.SparseVector as V
 import DSem.Weighting
+import Prelude hiding (Word)
 import Text.Printf
 
 type Word   = String

@@ -9,7 +9,6 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 
-import ConllReader
 import Control.Applicative
 import Control.Monad
 import Data.Char
@@ -32,10 +31,13 @@ import System.IO
 import System.Random (randomRIO)
 
 type Word           = Text
+type Sentence       = [Word]
+type Corpus         = [Sentence]
 type Index          = Int
 type WordCounts     = C.Counts Text
 type ContextIndex   = IM.IdMap Index Word
 
+{-
 mrMap 
   :: Set Word
   -> ContextIndex 
@@ -48,16 +50,16 @@ mrMap ts ci n ft fc =
   filter ((`S.member` ts) . fst) . concatMap pairs . windows n . sentenceTokens
   where pairs (x,xs) = [(T.pack $ t, c2) | t <- ft x, c <- xs, 
                         c1 <- fc c, Just c2 <- [IM.lookup' ci $ T.pack c1]]
+-}
 
 -- Targets found in a sentence
-sentenceTargets :: (Token -> [String]) -> Set Word -> Sentence -> Set Word
+sentenceTargets :: (Word -> Word) -> Set Word -> Sentence -> Set Word
 sentenceTargets ft ts = 
-   S.fromList . filter (`S.member` ts) . map T.pack . 
-   concatMap ft . sentenceTokens
+   S.fromList . filter (`S.member` ts) . map ft
 
 sampleSentenceTargets 
   :: SamplingProportions 
-  -> (Token -> [String]) 
+  -> (Word -> Word) 
   -> Set Word 
   -> Sentence 
   -> IO (Set Word)
@@ -72,30 +74,30 @@ mrMap2
   -> (Token -> [String]) 
   -> (Token -> [String]) 
   -> Sentence 
-  -> IO [(Word,Index)]
-mrMap2 ts sp ci n ft fc s = do
-  ts' <- sampleSentenceTargets sp ft ts s
-  return . filter ((`S.member` ts') . fst) . concatMap pairs . windows n $ 
-    sentenceTokens s
-  where pairs (x,xs) = [(T.pack $ t, c2) | t <- ft x, c <- xs, 
-                        c1 <- fc c, Just c2 <- [IM.lookup' ci $ T.pack c1]]
--}
-
-mrMap2
-  :: Set Word
-  -> SamplingProportions
-  -> ContextIndex 
-  -> Int 
-  -> (Token -> [String]) 
-  -> (Token -> [String]) 
-  -> Sentence 
-  -> IO (Counts (Word,Index))
+  -> IO (Counts (Word, Index))
 mrMap2 ts sp ci n ft fc s = do
   ts' <- sampleSentenceTargets sp ft ts s
   return . C.fromList . filter ((`S.member` ts') . fst) . 
     concatMap pairs . windows n $ sentenceTokens s
   where pairs (x,xs) = [(T.pack $ t, c2) | t <- ft x, c <- xs, 
                         c1 <- fc c, Just c2 <- [IM.lookup' ci $ T.pack c1]]
+-}
+
+mrMap3
+  :: Set Word
+  -> SamplingProportions
+  -> ContextIndex 
+  -> Int 
+  -> (Word -> Word) 
+  -> (Word -> Word) 
+  -> Sentence
+  -> IO (Counts (Word, Index))
+mrMap3 ts sp ci n ft fc s = do
+  ts' <- sampleSentenceTargets sp ft ts s
+  return . C.fromList . filter ((`S.member` ts') . fst) . 
+    concatMap pairs $ windows n s
+  where pairs (x, xs) = [(ft x, c2) | c <- xs, 
+                         Just c2 <- [IM.lookup' ci $ fc c]]
 
 -- extracts +-n sublists
 windows :: Int -> [a] -> [(a, [a])]
@@ -117,48 +119,24 @@ mrReduce xs = vs
         ys = map (\((t,c),f) -> (t,(c,f))) cs
         vs = [ (t,map snd x) | x@((t,_):_) <- groupBy ((==) `on` fst) ys]
 
-mkModel
-  :: Set Word
-  -> ContextIndex 
-  -> Int 
-  -> (Token -> [String]) 
-  -> (Token -> [String])
-  -> Corpus
-  -> [(Word,[(Index,Int)])]
-mkModel ts ci n ft fc = mrReduce . concatMap (mrMap ts ci n ft fc)
-
-{-
-mkModel2
-  :: Set Word
-  -> SamplingProportions
-  -> ContextIndex
-  -> Int
-  -> (Token -> [String])
-  -> (Token -> [String])
-  -> Corpus
-  -> IO [(Word, [(Index, Int)])]
-mkModel2 ts sp ci n ft fc c = 
-  mrReduce . concat <$> mapM (mrMap ts sp ci n ft fc) c
--}
-
 foldM' :: (Monad m) => (a -> b -> m a) -> a -> [b] -> m a
 foldM' _ z [] = return z
 foldM' f z (x:xs) = do
   z' <- f z x
   z' `seq` foldM' f z' xs
 
-mkModel2
+mkModel
   :: Set Word
   -> SamplingProportions
   -> ContextIndex
   -> Int
-  -> (Token -> [String])
-  -> (Token -> [String])
+  -> (Word -> Word)
+  -> (Word -> Word)
   -> Corpus
   -> IO [(Word, [(Index, Int)])]
-mkModel2 ts sp ci n ft fc c = do
+mkModel ts sp ci n ft fc c = do
   xs <- foldM' (\cs s -> do
-    cs' <- mrMap2 ts sp ci n ft fc s
+    cs' <- mrMap3 ts sp ci n ft fc s
     return $ cs `seq` cs `C.union` cs') C.empty c
   let cs = C.counts xs
       ys = map (\((t, c),f) -> (t, (c, f))) cs
@@ -200,49 +178,30 @@ arg =
   , Arg 2 (Just 'w') (Just "window") 
       (argDataDefaulted "size" ArgtypeInt 5) 
       "window size around target (default=5)"
-  , Arg 3 (Just 'f') (Just "fallback") Nothing 
-      ("fallback to word-forms if lemma is " ++ unk)
-  , Arg 4 Nothing (Just "tlower") Nothing 
-      "lowercase targets"
-  , Arg 5 Nothing (Just "clower") Nothing 
-      "lowercase contexts"
-  , Arg 6 Nothing (Just "tpos") Nothing 
-      "targets have coarse POS tag attached"
-  , Arg 7 Nothing (Just "cpos") Nothing 
-      "contexts have coarse POS tag attached"
-  , Arg 8 (Just 'p') (Just "proportions")  
+  , Arg 3 Nothing (Just "tlower") Nothing 
+      "lowercase corpus targets"
+  , Arg 4 Nothing (Just "clower") Nothing 
+      "lowercase corpus contexts"
+  , Arg 5 (Just 'p') (Just "proportions")  
     (argDataOptional "filename" ArgtypeString)
     "target words sampling proportions, one word per line"
-  , Arg 9 Nothing Nothing  (argDataRequired "corpus" ArgtypeString)
-      "corpus in CoNLL format" ]
-
-format :: Bool -> Bool -> Bool -> (Token -> [String])
-format False False False = lemma
-format False False True  = lemma'
-format False True  False = lemmaPos
-format False True  True  = lemmaPos'
-format True  False False = map lower . lemma
-format True  False True  = map lower . lemma'
-format True  True  False = map (\(l,p) -> lower l ++ posSep ++ p) . getLP
-format True  True  True  = map (\(l,p) -> lower l ++ posSep ++ p) . getLP'
-
-lower = map toLower
+  , Arg 6 Nothing Nothing  (argDataRequired "corpus" ArgtypeString)
+      "corpus (tokenized, one line per sentence)" ]
 
 main = do
   args <- parseArgsIO ArgsComplete arg
   let tf = getRequiredArg args 0
       cf = getRequiredArg args 1
       w  = getRequiredArg args 2
-      ft = format (gotArg args 4) (gotArg args 6) (gotArg args 3)
-      fc = format (gotArg args 5) (gotArg args 7) (gotArg args 3)
+      ft = if gotArg args 3 then T.toLower else id
+      fc = if gotArg args 4 then T.toLower else id
   hSetEncoding stdin utf8
   hSetEncoding stdout utf8
   ts <- S.fromList . map (head . T.words) . T.lines <$> readFile' tf
   ci <- (IM.fromList1 . map (head . T.words) . T.lines) <$> readFile' cf
-  sp <- case getArg args 8 of
+  sp <- case getArg args 5 of
           Nothing -> return M.empty
           Just f  -> readProportions f
-  c  <- readCorpus $ getRequiredArg args 9
-  --T.putStr . T.unlines . map showVec $ mkModel ts ci w ft fc c
-  (T.unlines . map showVec <$> mkModel2 ts sp ci w ft fc c) >>= T.putStr
+  c  <- map T.words . T.lines <$> (readFile' $ getRequiredArg args 6)
+  (T.unlines . map showVec <$> mkModel ts sp ci w ft fc c) >>= T.putStr
 

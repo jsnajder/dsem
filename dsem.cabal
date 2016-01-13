@@ -2,7 +2,7 @@
 -- see http://haskell.org/cabal/users-guide/
 
 name:                dsem
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            Basic distributional semantic models
 -- description:         
 homepage:            http://github.com/jsnajder/dsem
@@ -31,15 +31,15 @@ Library
     IdMap,
     FileDB
   build-depends:
-    base ==4.6.*, 
+    base ==4.8.*, 
     containers ==0.5.*, 
     dequeue ==0.1.*,
-    mtl ==2.1.*,
+    mtl ==2.2.*,
     split ==0.2.*, 
-    text ==0.11.*,
+    text ==1.2.*,
     utf8-string ==0.3.*, 
-    vector ==0.10.*,
-    parseargs ==0.1.*,
+    vector ==0.11.*,
+    parseargs ==0.2.*,
     conll-corpus ==0.1.*,
     counts ==0.1.*
  hs-source-dirs: src
@@ -72,82 +72,92 @@ Library
 --  Hs-Source-Dirs: src
 
 Executable conll2bow
-  Build-Depends:  base ==4.6.*, 
+  Build-Depends:  base ==4.8.*, 
                   containers ==0.5.*, 
                   counts ==0.1.*,
-                  parseargs ==0.1.*,
+                  parseargs ==0.2.*,
                   split ==0.2.*,
-                  text ==0.11.*,
+                  text ==1.2.*,
                   conll-corpus ==0.1.*,
                   random ==1.0.*
   Main-Is:        conll2bow.hs
   Hs-Source-Dirs: src
 
 Executable conll2bow-static
-  Build-Depends:  base ==4.6.*, 
+  Build-Depends:  base ==4.8.*, 
                   containers ==0.5.*, 
                   counts ==0.1.*,
-                  parseargs ==0.1.*,
+                  parseargs ==0.2.*,
                   split ==0.2.*,
-                  text ==0.11.*,
+                  text ==1.2.*,
                   conll-corpus ==0.1.*,
                   random ==1.0.*
   Main-Is:        conll2bow.hs
   Hs-Source-Dirs: src
   ghc-options:    -static -optl-pthread -optl-static
 
-Executable bow-weighting
-  Build-Depends:  base ==4.6.*, 
+Executable txt2bow
+  Build-Depends:  base ==4.8.*, 
                   containers ==0.5.*, 
-                  parseargs ==0.1.*, 
+                  counts ==0.1.*,
+                  parseargs ==0.2.*,
+                  text ==1.2.*,
+                  random ==1.0.*
+  Main-Is:        txt2bow.hs
+  Hs-Source-Dirs: src
+
+Executable bow-weighting
+  Build-Depends:  base ==4.8.*, 
+                  containers ==0.5.*, 
+                  parseargs ==0.2.*, 
                   dsem,
-                  text ==0.11.*
+                  text ==1.2.*
   Main-Is:        bow-weighting.hs
   Hs-Source-Dirs: src
 
 Executable bow-sim
   Main-Is:        bow-sim.hs
   Hs-Source-Dirs: src
-  Build-Depends:  base ==4.6.*, 
+  Build-Depends:  base ==4.8.*, 
                   containers ==0.5.*, 
-                  parseargs ==0.1.*, 
+                  parseargs ==0.2.*, 
                   dsem,
-                  text ==0.11.*,
-                  mtl ==2.1.*,
+                  text ==1.2.*,
+                  mtl ==2.2.*,
                   split ==0.2.*
 
 Executable bow-sim-static
   Main-Is:        bow-sim.hs
   Hs-Source-Dirs: src
   ghc-options:    -static -optl-pthread -optl-static
-  Build-Depends:  base ==4.6.*, 
+  Build-Depends:  base ==4.8.*, 
                   containers ==0.5.*, 
-                  parseargs ==0.1.*, 
+                  parseargs ==0.2.*, 
                   dsem,
-                  text ==0.11.*,
-                  mtl ==2.1.*,
+                  text ==1.2.*,
+                  mtl ==2.2.*,
                   split ==0.2.*
 
 Executable mwe2word
   Main-Is:        mwe2word.hs
   Hs-Source-Dirs: src
-  Build-Depends:  base ==4.6.*, 
+  Build-Depends:  base ==4.8.*, 
                   containers ==0.5.*, 
-                  parseargs ==0.1.*, 
+                  parseargs ==0.2.*, 
                   dsem,
-                  text ==0.11.*,
-                  mtl ==2.1.*,
+                  text ==1.2.*,
+                  mtl ==2.2.*,
                   split ==0.2.*
 
 Executable mwe2word-static
   Main-Is:        mwe2word.hs
   Hs-Source-Dirs: src
   ghc-options:    -static -optl-pthread -optl-static
-  Build-Depends:  base ==4.6.*, 
+  Build-Depends:  base ==4.8.*, 
                   containers ==0.5.*, 
-                  parseargs ==0.1.*, 
+                  parseargs ==0.2.*, 
                   dsem,
-                  text ==0.11.*,
-                  mtl ==2.1.*,
+                  text ==1.2.*,
+                  mtl ==2.2.*,
                   split ==0.2.*
 
